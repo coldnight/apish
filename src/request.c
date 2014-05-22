@@ -40,17 +40,12 @@ create_request_container(const char *scheme, const char *host, int port)
     if (tmp != NULL)
         return tmp;
 
-    if ((s = malloc(sizeof(char) * (strlen(scheme) + 1))) == NULL){
-        perror("memory is empty");
+    if ((s = dupstr(scheme)) == NULL){
         return NULL;
     }
-
-    if ((h = malloc(sizeof(char) * (strlen(host) + 1))) == NULL){
-        perror("memory is empty");
+    if ((h = dupstr(host)) == NULL){
         return NULL;
     }
-    strcpy(s, scheme);
-    strcpy(h, host);
 
     if ((tmp = malloc(sizeof(RequestContainer))) == NULL){
         perror("memory is empty");
@@ -122,12 +117,9 @@ add_request(RequestContainer *reqcont, const char *path, method_t method)
     if (tmp != NULL)
         return;
 
-    if ((p = malloc((strlen(path) + 1) * sizeof(char))) == NULL){
-        perror("memory is empty");
+    if ((p = dupstr(path)) == NULL){
         return;
     }
-    strcpy(p, path);
-
     if ((tmp = malloc(sizeof(Request))) == NULL){
         perror("memory is empty");
         return;
@@ -164,21 +156,16 @@ static void append_hash(StrHash **hash, const char *key, const char *value)
 {
     StrHash *tmp = find_hash(*hash, key);
     char *k, *v;
-    if ((v = malloc(sizeof(char) * (strlen(value) + 1))) == NULL){
-        perror("memory is empty");
+    if ((v = dupstr(value)) == NULL){
         return;
     }
-    strcpy(v, value);
     if (tmp == NULL){
         if ((tmp = malloc(sizeof(StrHash))) == NULL){
             perror("memory is empty");
             return;
         }
-        if ((k = malloc(sizeof(char) * (strlen(key) + 1))) == NULL){
-            perror("memory is empty");
+        if ((k = dupstr(key)) == NULL)
             return;
-        }
-        strcpy(k, key);
         tmp->key = k;
         tmp->val = v;
         tmp->next = NULL;
@@ -306,17 +293,13 @@ static char *hash_dump(StrHash *h)
 #endif
     for (tmp = h; tmp != NULL; tmp=tmp->next){
         char *k, *v, *key, *val;
-        if ((key = malloc(sizeof(char) * (strlen(tmp->key) + 1))) == NULL){
-            perror("memory empty");
+        if ((key = dupstr(tmp->key)) == NULL){
             break;
         }
-        strcpy(key, tmp->key);
-        if ((val = malloc(sizeof(char) * (strlen(tmp->val) + 1))) == NULL){
-            perror("memory empty");
+        if ((val = dupstr(tmp->val)) == NULL){
             break;
         }
-        strcpy(val, tmp->val);
-        v = curl_easy_escape(easy_handler, val, 0);
+    v = curl_easy_escape(easy_handler, val, 0);
         k = curl_easy_escape(easy_handler, key, 0);
         int size = strlen(k) + strlen(v) + 3;
         if (ret == NULL){
@@ -370,11 +353,9 @@ static StrHash *hash_load(const char *str)
                 buf[i] = '\0';
                 state = VALUE;
                 char *ek = curl_easy_unescape(easy_handler, buf, 0, 0);
-                if ((key = malloc(sizeof(char) * (strlen(ek) + 1))) == NULL){
-                    perror("memory empty");
+                if ((key = dupstr(ek)) == NULL){
                     return NULL;
                 }
-                strcpy(key, ek);
                 curl_free(ek);
                 i = 0;
             }
@@ -385,11 +366,9 @@ static StrHash *hash_load(const char *str)
                 buf[i] = '\0';
                 state = DONE;
                 char *ev = curl_easy_unescape(easy_handler, buf, 0, 0);
-                if ((val = malloc(sizeof(char) * (strlen(ev) + 1))) == NULL){
-                    perror("memory empty");
+                if ((val = dupstr(ev)) == NULL){
                     return NULL;
                 }
-                strcpy(val,  ev);
                 curl_free(ev);
                 i = 0;
 
@@ -411,14 +390,8 @@ static StrHash *hash_load(const char *str)
 static char *fscanfstr(FILE *fp, const char *format)
 {
     char buf[BUFSIZ];
-    char *ret;
     fscanf(fp, format, buf);
-    if ((ret = malloc(sizeof(char) * (strlen(buf) + 1))) == NULL){
-        perror("memory empty");
-        return NULL;
-    }
-    strcpy(ret, buf);
-    return ret;
+    return dupstr(buf);
 }
 
 static int count_n(FILE *fp){
@@ -644,7 +617,7 @@ struct curl_slist *parse_request_header(Request *req)
         }
         strcpy(ret, tmp->key);
         strcat(ret, ": ");
-        strcpy(ret, tmp->val);
+        strcat(ret, tmp->val);
         curl_slist_append(chunk, ret);
         free(ret);
     }
@@ -702,12 +675,11 @@ parse_query_value(const RequestContainer *rc, const Request *req, const char *bu
     enum STATE {NONE, LEDGE, REDGE, DOTKEY, STRKEY, INDEX};
     enum STATE state = NONE;
 
-    if ((b = malloc(sizeof(char) * (strlen(buf) + 1))) == NULL){
-        perror("Memory empty");
+
+    if ((b = dupstr(buf)) == NULL){
         json_object_put(obj);
         return NULL;
     }
-    strcpy(b, buf);
     char *o = b;
 
     for (ch = *b; ch != '\0'; ch = *(++b)){
@@ -796,11 +768,10 @@ parse_query_value(const RequestContainer *rc, const Request *req, const char *bu
     }
     const char *ret = json_object_get_string(obj);
     char *r;
-    if ((r = malloc(sizeof(char) * (strlen(ret) + 1))) == NULL){
+    if ((r = dupstr(ret)) == NULL){
         perror("Memory empty");
         goto error;
     }
-    strcpy(r, ret);
     free(o);
     json_object_put(obj);
     return r;

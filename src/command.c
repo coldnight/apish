@@ -74,22 +74,18 @@ create_command(CommandContainer *cc, const char *cmd, const char *info,
 {
     Command *tmp = find_command(cc, cmd);
     char  *i;
-    if ((i = malloc(sizeof(char) * (strlen(info) + 1))) == NULL){
-        perror("memory is empty");
+    if ((i = dupstr(info)) == NULL){
         return NULL;
     }
-    strcpy(i, info);
     if (tmp == NULL){
         if ((tmp = malloc(sizeof(Command))) == NULL){
             perror("memory is empty");
             return NULL;
         }
         char *c;
-        if ((c = malloc(sizeof(char) * (strlen(cmd) + 1))) == NULL){
-            perror("memory is empty");
+        if ((c = dupstr(cmd)) == NULL){
             return NULL;
         }
-        strcpy(c, cmd);
         tmp->cmd = c;
         tmp->next = NULL;
     }
@@ -473,12 +469,11 @@ add_key_val(int type, const char *str)
     char *val = strchr(last, ' ');
     if (val != NULL){
         val = strip(val, &n);
-        char *v = malloc(sizeof(char) * (strlen(val) + 1));
-        if (v == NULL){
+        char *v;
+        if ((v = dupstr(val)) == NULL) {
             perror("Memory empty");
             return FALSE;
         }
-        strcpy(v, val);
 
         last[strlen(last) - strlen(v) - n] = '\0';
         printf("Add %s: %s = %s\n", type == 1 ? "Parameter" : "Header", last, v);
