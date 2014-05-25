@@ -869,7 +869,7 @@ request_run(RequestContainer *rc, Request *req)
     request_number++;
 
     CURLcode res;
-    CURL *curl = easy_handler;
+    CURL *curl = curl_easy_init();
     char *url = get_request_url(rc, req);
     if (url == NULL){
         request_number--;
@@ -953,5 +953,6 @@ request_run(RequestContainer *rc, Request *req)
     request_number--;
     if (request_number == 0)
         current_request = NULL;
+    curl_easy_cleanup(curl);
     return obj;
 }
