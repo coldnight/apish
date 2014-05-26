@@ -47,7 +47,7 @@ create_request_container(const char *scheme, const char *host, int port)
         return NULL;
     }
 
-    if ((tmp = malloc(sizeof(RequestContainer))) == NULL){
+    if ((tmp = (RequestContainer *)malloc(sizeof(RequestContainer))) == NULL){
         perror("memory is empty");
         return NULL;
     }
@@ -92,7 +92,7 @@ int delete_request_container(int index)
 
 
 RequestContainer *
-find_request_container(char *scheme, char *host, int port)
+find_request_container(const char *scheme,const  char *host, int port)
 {
     if (request_container == NULL)
         return NULL;
@@ -120,7 +120,7 @@ add_request(RequestContainer *reqcont, const char *path, method_t method)
     if ((p = dupstr(path)) == NULL){
         return;
     }
-    if ((tmp = malloc(sizeof(Request))) == NULL){
+    if ((tmp = (Request *)malloc(sizeof(Request))) == NULL){
         perror("memory is empty");
         return;
     }
@@ -160,7 +160,7 @@ static void append_hash(StrHash **hash, const char *key, const char *value)
         return;
     }
     if (tmp == NULL){
-        if ((tmp = malloc(sizeof(StrHash))) == NULL){
+        if ((tmp = (StrHash *) malloc(sizeof(StrHash))) == NULL){
             perror("memory is empty");
             return;
         }
@@ -272,7 +272,7 @@ static char *get_dat_path(void)
     char *hp = getenv("HOME");
     if (hp == NULL)
         return DATA_FILE;
-    char *r = malloc(sizeof(char) * (strlen(hp) + strlen(DATA_FILE) + 2));
+    char *r = (char *) malloc(sizeof(char) * (strlen(hp) + strlen(DATA_FILE) + 2));
     if (r == NULL){
         perror("memory empty");
         return DATA_FILE;
@@ -306,13 +306,13 @@ static char *hash_dump(StrHash *h)
 #ifdef DEBUG
             printf("msize: %d\n", size);
 #endif
-            ret = malloc(sizeof(char) * size);
+            ret = (char *)malloc(sizeof(char) * size);
             strcpy(ret, "");
         }else{
 #ifdef DEBUG
             printf("rsize: %ld\n", size + strlen(ret));
 #endif
-            ret = realloc(ret, sizeof(char) * (size + strlen(ret)));
+            ret = (char *) realloc(ret, sizeof(char) * (size + strlen(ret)));
 
         }
         if (ret == NULL){
@@ -466,11 +466,13 @@ void request_load(void)
             case QUERY:
                 if (rc == NULL)
                     continue;
-                char *querystr = fscanfstr(fp, "%s");
+                char *querystr;
+                querystr = fscanfstr(fp, "%s");
 #ifdef DEBUG
                 printf("%s\n", querystr);
 #endif
-                StrHash *query = hash_load(querystr);
+                StrHash *query;
+                query = hash_load(querystr);
                 req = find_request(rc, pth, method);
                 req->query = query;
                 count = count_n(fp);
@@ -490,7 +492,8 @@ void request_load(void)
 #ifdef DEBUG
                 printf("%s\n", headerstr);
 #endif
-                StrHash *header = hash_load(headerstr);
+                StrHash *header;
+                header = hash_load(headerstr);
                 req = find_request(rc, pth, method);
                 req->header = header;
                 free(headerstr);
@@ -591,7 +594,7 @@ static char *get_request_url(const RequestContainer *rc, const Request *req)
             return NULL;
         }
     }
-    if ((ret = malloc(size)) == NULL){
+    if ((ret = (char *)malloc(size)) == NULL){
         perror("Memory empty");
         return NULL;
     }
@@ -610,7 +613,7 @@ struct curl_slist *parse_request_header(Request *req)
     StrHash *tmp;
 
     for (tmp = req->header; tmp != NULL; tmp=tmp->next){
-        char *ret = malloc(sizeof(char) + (strlen(tmp->key) + strlen(tmp->val) + 3));
+        char *ret = (char *)malloc(sizeof(char) + (strlen(tmp->key) + strlen(tmp->val) + 3));
         if (ret == NULL){
             perror("Memory empty");
             return chunk;
@@ -766,9 +769,8 @@ parse_query_value(const RequestContainer *rc, const Request *req, const char *bu
         fprintf(stderr, "Brackets Right Edge Error: %s\n", buf);
         goto error;
     }
-    const char *ret = json_object_get_string(obj);
     char *r;
-    if ((r = dupstr(ret)) == NULL){
+    if ((r = dupstr(json_object_get_string(obj))) == NULL){
         perror("Memory empty");
         goto error;
     }
@@ -797,7 +799,7 @@ static char *parse_request_query(const RequestContainer *rc, const Request *req)
     enum STATE state = NONE;
     StrHash *query = req->query;
     char buf[BUFSIZ], *ret;
-    if ((ret = malloc(sizeof(char) * (BUFSIZ + 1))) == NULL){
+    if ((ret = (char *) malloc(sizeof(char) * (BUFSIZ + 1))) == NULL){
         perror("Memory empty");
         return NULL;
     }
@@ -806,7 +808,7 @@ static char *parse_request_query(const RequestContainer *rc, const Request *req)
         char *v = query->val;
         char *rv;
         int size = BUFSIZ;
-        if ((rv = malloc(sizeof(char) * (size + 1))) == NULL){
+        if ((rv = (char *) malloc(sizeof(char) * (size + 1))) == NULL){
             perror("Memory empty");
             free(ret);
             return NULL;
@@ -917,7 +919,7 @@ request_run(RequestContainer *rc, Request *req)
     fseek(fp, 0, SEEK_SET);
 
     int size = BUFSIZ;
-    char *str = malloc(sizeof(char) * (size + 1));
+    char *str = (char *)malloc(sizeof(char) * (size + 1));
     if (str == NULL){
         perror("Memory empty");
         request_number--;
@@ -929,7 +931,7 @@ request_run(RequestContainer *rc, Request *req)
     while(!feof(fp)){
         size_t s = fread(str, BUFSIZ, sizeof(char), fp);
         if (s == BUFSIZ){
-            str = realloc(str, sizeof(char) * (size + BUFSIZ + 1));
+            str = (char *)realloc(str, sizeof(char) * (size + BUFSIZ + 1));
             if (str == NULL){
                 request_number--;
                 if (request_number == 0)

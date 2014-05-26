@@ -33,14 +33,11 @@ create_command_container(const char *key){
     CommandContainer *tmp = find_command_container(key);
     char *k;
     if (tmp == NULL){
-        if ((tmp = malloc(sizeof(CommandContainer))) == NULL){
+        if ((tmp = (CommandContainer *)malloc(sizeof(CommandContainer))) == NULL){
             perror("memory empty");
             return NULL;
         }
-        if ((k = malloc(sizeof(char) * (strlen(key) + 1))) == NULL){
-            perror("memory empty");
-            return NULL;
-        }
+        k = dupstr(key);
         tmp->key = k;
         tmp->next = NULL;
         tmp->commands = NULL;
@@ -78,7 +75,7 @@ create_command(CommandContainer *cc, const char *cmd, const char *info,
         return NULL;
     }
     if (tmp == NULL){
-        if ((tmp = malloc(sizeof(Command))) == NULL){
+        if ((tmp = (Command *)malloc(sizeof(Command))) == NULL){
             perror("memory is empty");
             return NULL;
         }
@@ -265,8 +262,9 @@ static int do_main_cd_handler(const char *cmd){
     char *last = NULL;
     int index = 0, i = 0;
     if (strlen(cmd) > 2){
-        last = strchr(cmd, ' ');
+        last = dupstr(strchr(cmd, ' '));
         index = atoi(last);
+        free(last);
     }
     RequestContainer *rc;
 
@@ -294,7 +292,7 @@ static char * get_container_prompt(void)
     for (req = current_rc->requests; req != NULL; c++, req = req->next)
         ;
     size = strlen(current_rc->host) + strlen(current_rc->host) + 54;
-    if ((tmp = malloc(sizeof(char) * size)) == NULL){
+    if ((tmp = (char *) malloc(sizeof(char) * size)) == NULL){
         perror("Memory is empty");
         return NULL;
     }
@@ -418,8 +416,9 @@ static int do_container_cd(const char *str)
     int i, index = 0;
     if (strlen(str) > 3 && strncmp(str, "cd ", 3) == 0){
         char *l;
-        l = strchr(str, ' ');
+        l = dupstr(strchr(str, ' '));
         index = atoi(l);
+        free(l);
     }
     Request *req = NULL;
     for (i=0, req = current_rc->requests; req != NULL && i != index; i++, req=req->next)
@@ -430,7 +429,7 @@ static int do_container_cd(const char *str)
         return TRUE;
     }
     int mlen = req->method == POST ? strlen("POST") : strlen("GET");
-    prompt = realloc(prompt, sizeof(char) * (strlen(prompt) + strlen(req->path) + mlen + 7));
+    prompt = (char *)realloc(prompt, sizeof(char) * (strlen(prompt) + strlen(req->path) + mlen + 7));
     strcat(prompt, " ");
     strcat(prompt, req->path);
     strcat(prompt, " ");
@@ -465,13 +464,16 @@ static int
 add_key_val(int type, const char *str)
 {
     int n;
-    char *last = strip(strchr(str, ' '), &n);
+    char *t;
+    t = dupstr(strchr(str, ' '));
+    char *last = strip(t, &n);
     char *val = strchr(last, ' ');
     if (val != NULL){
         val = strip(val, &n);
         char *v;
         if ((v = dupstr(val)) == NULL) {
             perror("Memory empty");
+            free(t);
             return FALSE;
         }
 
@@ -490,7 +492,7 @@ add_key_val(int type, const char *str)
             printf("\t%-20s:%s\n", last, val);
         }
     }
-
+    free(t);
     return TRUE;
 }
 

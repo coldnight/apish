@@ -1,8 +1,12 @@
-#ifndef _UTIL_H
-#define _UTIL_H
+#ifndef APISH_UTIL_H
+#define APISH_UTIL_H
 
 #define LOCK_SUFFIX ".lock"
 #define LEVEL_STR "  "
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 extern int file_exists(const char *);
 extern int lock_file(const char *);
@@ -12,4 +16,8 @@ extern char *get_lock_path(const char*);
 extern void print_pretty_json(const char *);
 extern char *dupstr(const char *);
 extern char *stripspace(char *);
+
+#ifdef __cplusplus
+}
+#endif
 #endif

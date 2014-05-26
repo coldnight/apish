@@ -1,5 +1,5 @@
-#ifndef _APISH_H
-#define _APISH_H
+#ifndef APISH_H
+#define APISH_H
 
 #define FALSE 0
 #define TRUE 1

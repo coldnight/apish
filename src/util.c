@@ -19,7 +19,7 @@ int file_exists(const char *path)
 char *get_lock_path(const char *path)
 {
     char *tmp;
-    if ((tmp = malloc(sizeof(char) * (strlen(path) + strlen(LOCK_SUFFIX) + 1))) == NULL){
+    if ((tmp = (char *)malloc(sizeof(char) * (strlen(path) + strlen(LOCK_SUFFIX) + 1))) == NULL){
         return NULL;
     }
     strcpy(tmp, path);
@@ -87,7 +87,7 @@ static void print_level_string(int level){
 void print_pretty_json(const char *json_str)
 {
     char *buf;
-    if ((buf = malloc(sizeof(char) * (strlen(json_str) + 1))) == NULL){
+    if ((buf = (char *)malloc(sizeof(char) * (strlen(json_str) + 1))) == NULL){
         perror("Memory empty");
         return;
     }
@@ -135,7 +135,7 @@ void print_pretty_json(const char *json_str)
 char *dupstr(const char *s)
 {
     char *r;
-    if ((r = malloc(sizeof(char) * (strlen(s) + 1))) == NULL){
+    if ((r = (char *)malloc(sizeof(char) * (strlen(s) + 1))) == NULL){
         perror("memoty empty");
         return NULL;
     }
