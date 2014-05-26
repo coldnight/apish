@@ -453,6 +453,42 @@ static int do_container_verbose(const char *str)
     return True;
 }
 
+static int do_container_run(const char *str)
+{
+    if (strncmp(str, "run", 3) != 0)
+        return False;
+    if (strlen(str) == 3){
+        Request *req;
+        for (req = current_rc->requests; req != NULL; req=req->next){
+            printf("==== Running %s %s ====\n", req->method == POST ? "POST": "GET",
+                    req->path);
+            request_run(current_rc, req);
+            printf("==== End %s %s ====\n", req->method == POST ? "POST": "GET",
+                    req->path);
+        }
+        return True;
+    }
+    return True;
+}
+
+static int do_container_drop(const char *str)
+{
+    if (strlen(str) > 4 && strncmp(str, "drop ", 5) == 0){
+        char *last;
+        int index, i;
+        last = dupstr(strchr(str, ' '));
+        index = atoi(last);
+
+        i = delete_request(current_rc, index);
+        if (i == -1){
+            fprintf(stderr, "%d is out of index\n", index);
+        }else{
+        }
+        return True;
+    }
+    return False;
+}
+
 static int do_request_exit(const char *str)
 {
     if (strcmp(str, "exit") != 0)
@@ -561,24 +597,26 @@ void command_init(void)
     maincc = create_command_container("main");
     current = maincc;
     create_command(maincc, "cd", "Enter to container", do_main_cd_handler);
-    create_command(maincc, "ls", "List Request Containers", do_main_ls_handler);
-    create_command(maincc, "new", "Create a Request Container", do_main_new_handler);
-    create_command(maincc, "drop", "Drop a Request Container", do_main_delete_handler);
-    create_command(maincc, "help", "Show Help Info", do_main_help_handler);
+    create_command(maincc, "ls", "List request containers", do_main_ls_handler);
+    create_command(maincc, "new", "Create a request container", do_main_new_handler);
+    create_command(maincc, "drop", "Drop a request container", do_main_delete_handler);
+    create_command(maincc, "help", "Show help info", do_main_help_handler);
     create_command(maincc, "exit", "Exit", do_main_exit_handler);
 
     containercc = create_command_container("container");
-    create_command(containercc, "cd", "Enter to Request", do_container_cd);
-    create_command(containercc, "ls", "List Requests", do_container_ls_hander);
-    create_command(containercc, "new", "Create a Request", do_container_new);
-    create_command(containercc, "help", "Show Help Info", do_main_help_handler);
-    create_command(containercc, "exit", "Back Container List", do_container_exit);
+    create_command(containercc, "cd", "Enter to request", do_container_cd);
+    create_command(containercc, "ls", "List requests", do_container_ls_hander);
+    create_command(containercc, "new", "Create a request", do_container_new);
+    create_command(containercc, "run", "Run request(s)", do_container_run);
+    create_command(containercc, "drop", "Drop a request", do_container_drop);
+    create_command(containercc, "help", "Show help info", do_main_help_handler);
+    create_command(containercc, "exit", "Back container list", do_container_exit);
     create_command(containercc, "verbose", "Show verbose", do_container_verbose);
 
     requestcc = create_command_container("request");
-    create_command(requestcc, "p", "Show/Change/Add Parameter", do_request_p);
-    create_command(requestcc, "h", "Show/Change/Add Header", do_request_h);
-    create_command(requestcc, "run", "Run Request", do_request_run);
-    create_command(requestcc, "help", "Show Help Info", do_main_help_handler);
-    create_command(requestcc, "exit", "Back Request List", do_request_exit);
+    create_command(requestcc, "p", "Show/Change/Add parameter", do_request_p);
+    create_command(requestcc, "h", "Show/Change/Add header", do_request_h);
+    create_command(requestcc, "run", "Run request", do_request_run);
+    create_command(requestcc, "help", "Show help info", do_main_help_handler);
+    create_command(requestcc, "exit", "Back request list", do_request_exit);
 }

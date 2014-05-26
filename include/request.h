@@ -43,6 +43,7 @@ extern RequestContainer *create_request_container(const char *, const char *, in
 extern int delete_request_container(int);
 extern RequestContainer *find_request_container(const char *, const char *, int);
 extern void add_request(RequestContainer *, const char *, method_t);
+extern int delete_request(RequestContainer *, int);
 extern Request *find_request(RequestContainer *, const char *, method_t);
 extern StrHash *find_hash(StrHash *, const char *key);
 extern void add_query(Request*, const char *, const char *);

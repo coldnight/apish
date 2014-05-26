@@ -10,6 +10,7 @@
 
 static void free_request(RequestContainer *);
 static void free_one_container(RequestContainer *);
+static void free_one_request(Request *);
 static char *parse_request_query(const RequestContainer *, const Request *);
 
 RequestContainer * request_container = NULL;
@@ -80,14 +81,37 @@ int delete_request_container(int index)
     RequestContainer *tmp, *prev=NULL;
     for (tmp=request_container; tmp != NULL && i < index; prev=tmp,tmp=tmp->next, i++)
         ;
-    if (tmp == NULL){
+    if (tmp == NULL || i != index){
         return -1;
     }
     if (prev==NULL)
-        request_container = NULL;
+        request_container = tmp->next;
     else
         prev->next = tmp->next;
     free_one_container(tmp);
+    return 0;
+}
+
+/*
+ * 根据索引删除请求
+ * return 0 success -1 超出索引
+ */
+int delete_request(RequestContainer *rc, int index)
+{
+    int i = 0;
+    Request *req, *prev = NULL;
+    for (req = rc->requests; req != NULL && i < index; prev=req, req=req->next, i++)
+        ;
+
+    if (req == NULL || i != index){
+        return -1;
+    }
+    if (prev == NULL){
+        rc->requests = req->next;
+    }else{
+        prev->next = req->next;
+    }
+    free_one_request(req);
     return 0;
 }
 
@@ -224,28 +248,31 @@ StrHash *find_hash(StrHash *hash, const char *key)
 }
 
 static void
+free_one_request(Request *req)
+{
+    StrHash *hash;
+    for (hash=req->query; hash != NULL; hash=hash->next){
+        free(hash->key);
+        free(hash->val);
+        free(hash);
+    }
+
+    for (hash=req->header; hash != NULL; hash=hash->next){
+        free(hash->key);
+        free(hash->val);
+        free(hash);
+    }
+    free(req->path);
+    json_object_put(req->write_data);
+    free(req);
+}
+
+static void
 free_request(RequestContainer *rc)
 {
-    Request *req, *next;
-    for (req = rc->requests; req != NULL; req=next){
-        next = req->next;
-        StrHash *hash, *next;
-        for (hash=req->query; hash != NULL; hash=next){
-            next = hash->next;
-            free(hash->key);
-            free(hash->val);
-            free(hash);
-        }
-
-        for (hash=req->header; hash != NULL; hash=next){
-            next = hash->next;
-            free(hash->key);
-            free(hash->val);
-            free(hash);
-        }
-        free(req->path);
-        json_object_put(req->write_data);
-        free(req);
+    Request *req;
+    for (req = rc->requests; req != NULL; req=req->next){
+        free_one_request(req);
     }
 }
 
