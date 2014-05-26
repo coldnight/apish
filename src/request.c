@@ -55,6 +55,7 @@ create_request_container(const char *scheme, const char *host, int port)
     tmp->scheme = s;
     tmp->host = h;
     tmp->port = port;
+    tmp->verbose = False;
     tmp->next = NULL;
     if (request_container == NULL){
         request_container = tmp;
@@ -879,7 +880,11 @@ request_run(RequestContainer *rc, Request *req)
     }
     char *body = NULL;
     curl_easy_setopt(curl, CURLOPT_URL, url);
-    curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
+    if (current_request == req){
+        curl_easy_setopt(curl, CURLOPT_VERBOSE, rc->verbose);
+    }else{
+        curl_easy_setopt(curl, CURLOPT_VERBOSE, 0);
+    }
     if (req->method == POST){
         body = parse_request_query(rc, req);
         if (body == NULL){
@@ -943,12 +948,14 @@ request_run(RequestContainer *rc, Request *req)
     }
     struct json_object *obj;
     obj = json_tokener_parse(str);
-    if (obj == NULL){
-        printf("\nText Response >>>\n %s\n", str);
-    }else{
-        req->write_data = obj;
-        printf("\nJSON Response >>> \n");
-        print_pretty_json(json_object_to_json_string(obj));
+    if (current_request == req){
+        if (obj == NULL){
+            printf("\nText Response >>>\n %s\n", str);
+        }else{
+            req->write_data = obj;
+            printf("\nJSON Response >>> \n");
+            print_pretty_json(json_object_to_json_string(obj));
+        }
     }
     free(str);
     fclose(fp);

@@ -440,6 +440,19 @@ static int do_container_cd(const char *str)
     return True;
 }
 
+static int do_container_verbose(const char *str)
+{
+    if (strcmp(str, "verbose") != 0)
+        return False;
+    current_rc->verbose = !current_rc->verbose;
+    if (current_rc->verbose)
+        printf("Turn on verbose infomation!\n");
+    else
+        printf("Turn off verbose infomation!\n");
+
+    return True;
+}
+
 static int do_request_exit(const char *str)
 {
     if (strcmp(str, "exit") != 0)
@@ -541,6 +554,7 @@ static int do_request_run(const char *str)
     return True;
 }
 
+
 void command_init(void)
 {
     signal(SIGINT, handle_sigs);
@@ -559,6 +573,7 @@ void command_init(void)
     create_command(containercc, "new", "Create a Request", do_container_new);
     create_command(containercc, "help", "Show Help Info", do_main_help_handler);
     create_command(containercc, "exit", "Back Container List", do_container_exit);
+    create_command(containercc, "verbose", "Show verbose", do_container_verbose);
 
     requestcc = create_command_container("request");
     create_command(requestcc, "p", "Show/Change/Add Parameter", do_request_p);

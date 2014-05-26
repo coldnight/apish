@@ -34,6 +34,7 @@ typedef struct REQCONTAINER{
     char *scheme;
     char *host;
     int port;
+    int verbose;
     struct REQCONTAINER *next;
     Request *requests;
 }RequestContainer;
