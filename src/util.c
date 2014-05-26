@@ -10,9 +10,9 @@ int file_exists(const char *path)
 {
     struct stat buf;
     if (stat(path, &buf) == 0){
-        return TRUE;
+        return True;
     }else{
-        return FALSE;
+        return False;
     }
 }
 
@@ -31,7 +31,7 @@ int is_file_locked(const char *path)
 {
     char *lpth = get_lock_path(path);
     if (lpth == NULL){
-        return FALSE;
+        return False;
     }
     int ret = file_exists(lpth);
     free(lpth);
@@ -42,38 +42,38 @@ int lock_file(const char *path)
 {
     char *pth = get_lock_path(path);
     if (pth == NULL){
-        return FALSE;
+        return False;
     }
 
     if (file_exists(pth)){
         free(pth);
-        return TRUE;
+        return True;
     }
     FILE *fp = fopen(pth, "w");
     if (fp == NULL){
         free(pth);
-        return FALSE;
+        return False;
     }
     fclose(fp);
     free(pth);
-    return TRUE;
+    return True;
 }
 
 int unlock_file(const char *path)
 {
     char *lpth = get_lock_path(path);
     if (lpth == NULL){
-        return FALSE;
+        return False;
     }
 
     if (!file_exists(lpth))
-        return TRUE;
+        return True;
     if (remove(lpth) == 0){
         free(lpth);
-        return TRUE;
+        return True;
     }
     free(lpth);
-    return FALSE;
+    return False;
 }
 
 static void print_level_string(int level){
@@ -93,8 +93,8 @@ void print_pretty_json(const char *json_str)
     }
     strcpy(buf, json_str);
     char *o = buf;
-    int level = 0, ch, wrap=FALSE, wrapped = FALSE;
-    int i, n = 0;
+    int level = 0, ch, wrap=False, wrapped = False;
+    int n = 0;
 
     for (ch = *buf; ch != '\0'; ch = *(++buf), n++){
 
@@ -102,28 +102,28 @@ void print_pretty_json(const char *json_str)
             level++;
             putchar(ch);
             putchar('\n');
-            wrapped = TRUE;
+            wrapped = True;
             print_level_string(level);
         }else if (ch == '}' || ch == ']'){
             putchar('\n');
-            wrapped = TRUE;
+            wrapped = True;
             level--;
             print_level_string(level);
             putchar(ch);
-            wrap=TRUE;
+            wrap=True;
         }else if (ch == ','){
             putchar(ch);
             putchar('\n');
-            wrapped = TRUE;
+            wrapped = True;
             print_level_string(level);
             if (wrap)
-                wrap = FALSE;
+                wrap = False;
         }else if ( wrapped && ch == ' ')
             continue;
         else{
             putchar(ch);
-            wrap = FALSE;
-            wrapped = FALSE;
+            wrap = False;
+            wrapped = False;
         }
     }
     /* printf("Done\n\n"); */

@@ -191,7 +191,7 @@ void handle_sigs(int sig)
         longjmp(ctrlc_buf, 1);
     }else if (sig == SIGQUIT){
         printf("exit..");
-        LOOP_FINISHED = TRUE;
+        LOOP_FINISHED = True;
     }
 }
 
@@ -222,18 +222,18 @@ void command_loop(void)
 static int do_main_help_handler(const char *cmd)
 {
     if (strcmp(cmd, "help") != 0)
-        return FALSE;
+        return False;
     Command *tmp;
     for(tmp = current->commands;  tmp != NULL; tmp=tmp->next){
         printf("%-20s\t%s\n", tmp->cmd, tmp->info);
     }
-    return TRUE;
+    return True;
 }
 
 static int do_main_ls_handler(const char *cmd)
 {
     if (strcmp(cmd, "ls") != 0){
-        return FALSE;
+        return False;
     }
 
     RequestContainer *rc;
@@ -245,20 +245,20 @@ static int do_main_ls_handler(const char *cmd)
             ;
         printf("[%2d] <%s://%s:%d [%2d]>\n", i++, rc->scheme, rc->host, rc->port, c);
     }
-    return TRUE;
+    return True;
 }
 
 static int do_main_exit_handler(const char *cmd)
 {
     if (strcmp(cmd, "exit") != 0)
-        return FALSE;
+        return False;
     LOOP_FINISHED = 1;
-    return TRUE;
+    return True;
 }
 
 static int do_main_cd_handler(const char *cmd){
     if (strncmp(cmd, "cd", 2) != 0)
-        return FALSE;
+        return False;
     char *last = NULL;
     int index = 0, i = 0;
     if (strlen(cmd) > 2){
@@ -272,7 +272,7 @@ static int do_main_cd_handler(const char *cmd){
         ;
     if (rc == NULL){
         printf("Index Error\n");
-        return TRUE;
+        return True;
     }else{
         current_rc = rc;
         current = containercc;
@@ -280,7 +280,7 @@ static int do_main_cd_handler(const char *cmd){
     if (strcmp(prompt, CMDPROMPT) != 0)
         free(prompt);
     prompt = get_container_prompt();
-    return TRUE;
+    return True;
 }
 
 static char * get_container_prompt(void)
@@ -303,7 +303,7 @@ static char * get_container_prompt(void)
 static int do_main_new_handler(const char *str)
 {
     if (strcmp(str, "new") != 0)
-        return FALSE;
+        return False;
     char scheme[20], host[BUFSIZ], port[20];
     int p;
     while (1){
@@ -325,13 +325,13 @@ static int do_main_new_handler(const char *str)
     }
     create_request_container(scheme, host, p);
 
-    return TRUE;
+    return True;
 }
 
 static int do_main_delete_handler(const char *str)
 {
     if (strncmp(str, "drop", 4) != 0){
-        return FALSE;
+        return False;
     }
     int index = 0;
 
@@ -367,17 +367,17 @@ static char *strupper(char *str)
 static int do_container_new(const char *str)
 {
     if (strcmp(str, "new") != 0)
-        return FALSE;
+        return False;
     char path[BUFSIZ], method[6];
     method_t m;
 
-    while (TRUE){
+    while (True){
         raw_input("Path:", path, BUFSIZ);
         if (strlen(path) > 0)
             break;
 
     }
-    while (TRUE){
+    while (True){
         raw_input("Method ([GET]/POST):", method, 6);
         if (strlen(method) == 0){
             m = GET;
@@ -393,7 +393,7 @@ static int do_container_new(const char *str)
         }
     }
     add_request(current_rc, path, m);
-    return TRUE;
+    return True;
 }
 
 static int do_container_exit(const char *str)
@@ -410,7 +410,7 @@ static int do_container_exit(const char *str)
 static int do_container_cd(const char *str)
 {
     if (strncmp(str, "cd", 2) != 0){
-        return FALSE;
+        return False;
     }
 
     int i, index = 0;
@@ -426,7 +426,7 @@ static int do_container_cd(const char *str)
 
     if (req == NULL){
         printf("Index Error\n");
-        return TRUE;
+        return True;
     }
     int mlen = req->method == POST ? strlen("POST") : strlen("GET");
     prompt = (char *)realloc(prompt, sizeof(char) * (strlen(prompt) + strlen(req->path) + mlen + 7));
@@ -437,18 +437,18 @@ static int do_container_cd(const char *str)
     strcat(prompt, " >> ");
     current = requestcc;
     current_req = req;
-    return TRUE;
+    return True;
 }
 
 static int do_request_exit(const char *str)
 {
     if (strcmp(str, "exit") != 0)
-        return FALSE;
+        return False;
     if (strcmp(prompt, CMDPROMPT) != 0)
         free(prompt);
     prompt = get_container_prompt();
     current = containercc;
-    return TRUE;
+    return True;
 }
 
 static char
@@ -474,7 +474,7 @@ add_key_val(int type, const char *str)
         if ((v = dupstr(val)) == NULL) {
             perror("Memory empty");
             free(t);
-            return FALSE;
+            return False;
         }
 
         last[strlen(last) - strlen(v) - n] = '\0';
@@ -493,13 +493,13 @@ add_key_val(int type, const char *str)
         }
     }
     free(t);
-    return TRUE;
+    return True;
 }
 
 static int do_request_p(const char *str)
 {
     if (strncmp(str, "p", 1) != 0)
-        return FALSE;
+        return False;
     if (strlen(str) == 1){
         StrHash *query;
         printf("Parameters:\n");
@@ -509,15 +509,15 @@ static int do_request_p(const char *str)
     }else if(strncmp(str, "p ", 2) == 0){
         add_key_val(1, str);
     }else{
-        return FALSE;
+        return False;
     }
-    return TRUE;
+    return True;
 }
 
 static int do_request_h(const char *str)
 {
     if (strncmp(str, "h", 1) != 0)
-        return FALSE;
+        return False;
     if (strlen(str) == 1){
         StrHash *header;
         printf("Headers:\n");
@@ -527,18 +527,18 @@ static int do_request_h(const char *str)
     }else if(strncmp(str, "h ", 2) == 0){
         add_key_val(2, str);
     }else{
-        return FALSE;
+        return False;
     }
-    return TRUE;
+    return True;
 }
 
 static int do_request_run(const char *str)
 {
     if (strcmp(str, "run") != 0)
-        return FALSE;
+        return False;
 
     request_run(current_rc, current_req);
-    return TRUE;
+    return True;
 }
 
 void command_init(void)

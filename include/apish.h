@@ -1,8 +1,8 @@
 #ifndef APISH_H
 #define APISH_H
 
-#define FALSE 0
-#define TRUE 1
+#define False 0
+#define True 1
 #define DATA_FILE ".apish.dat"
 
 /* #define DEBUG */

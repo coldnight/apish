@@ -1,5 +1,5 @@
 CC=gcc
-FLAGS=
+FLAGS= -Wall 
 CFLAGS += $(shell pkg-config --cflags json-c)
 CFLAGS += -lreadline
 LDFLAGS += $(shell pkg-config --libs json-c)
