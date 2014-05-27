@@ -15,17 +15,17 @@ extern "C" {
 typedef enum _method_t {GET, POST} method_t;
 
 
-typedef struct STRHASH {
+typedef struct TABLE {
     char *key;
     char *val;
-    struct STRHASH *next;
-} StrHash;
+    struct TABLE *next;
+} Table;
 
 typedef struct REQ {
     char *path;
     method_t method;
-    StrHash *query;
-    StrHash *header;
+    Table *query;
+    Table *header;
     struct json_object *write_data;
     struct REQ *next;
 } Request;
@@ -45,7 +45,8 @@ extern RequestContainer *find_request_container(const char *, const char *, int)
 extern void add_request(RequestContainer *, const char *, method_t);
 extern int delete_request(RequestContainer *, int);
 extern Request *find_request(RequestContainer *, const char *, method_t);
-extern StrHash *find_hash(StrHash *, const char *key);
+extern Table *find_table(Table *, const char *key);
+extern int delete_table(Table **, const char *);
 extern void add_query(Request*, const char *, const char *);
 extern char *find_query(Request *, const char *);
 extern void add_header(Request *, const char *, const char *);

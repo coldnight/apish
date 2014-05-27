@@ -177,15 +177,15 @@ find_request(RequestContainer *reqcont, const char *path, method_t method)
     return NULL;
 }
 
-static void append_hash(StrHash **hash, const char *key, const char *value)
+static void append_table(Table **table, const char *key, const char *value)
 {
-    StrHash *tmp = find_hash(*hash, key);
+    Table *tmp = find_table(*table, key);
     char *k, *v;
     if ((v = dupstr(value)) == NULL){
         return;
     }
     if (tmp == NULL){
-        if ((tmp = (StrHash *) malloc(sizeof(StrHash))) == NULL){
+        if ((tmp = (Table *) malloc(sizeof(Table))) == NULL){
             perror("memory is empty");
             return;
         }
@@ -194,8 +194,8 @@ static void append_hash(StrHash **hash, const char *key, const char *value)
         tmp->key = k;
         tmp->val = v;
         tmp->next = NULL;
-        StrHash *h, *o;
-        for (o = h = *hash; h != NULL; o = h,h=h->next)
+        Table *h, *o;
+        for (o = h = *table; h != NULL; o = h,h=h->next)
             ;
         if (o != NULL){
             o->next = tmp;
@@ -204,19 +204,19 @@ static void append_hash(StrHash **hash, const char *key, const char *value)
         tmp->val = v;
     }
 
-    if (*hash == NULL){
-        *hash = tmp;
+    if (*table == NULL){
+        *table = tmp;
     }
 }
 
 void add_query(Request *tmp, const char *key, const char *value)
 {
-    append_hash(&tmp->query, key, value);
+    append_table(&tmp->query, key, value);
 }
 
 char *find_query(Request *req, const char *key)
 {
-    StrHash *tmp;
+    Table *tmp;
     for (tmp = req->query; tmp != NULL; tmp=tmp->next)
         if (strcmp(key, tmp->key) == 0)
             return tmp->val;
@@ -225,23 +225,23 @@ char *find_query(Request *req, const char *key)
 
 void add_header(Request *tmp, const char *key, const char *value)
 {
-    append_hash(&tmp->header, key, value);
+    append_table(&tmp->header, key, value);
 }
 
 char *find_header(Request *req, const char *key)
 {
-    StrHash *t;
-    t = find_hash(req->header, key);
+    Table *t;
+    t = find_table(req->header, key);
     if (t == NULL)
         return NULL;
     else
         return t->val;
 }
 
-StrHash *find_hash(StrHash *hash, const char *key)
+Table *find_table(Table *table, const char *key)
 {
-    StrHash *tmp;
-    for (tmp=hash; tmp != NULL; tmp=tmp->next)
+    Table *tmp;
+    for (tmp=table; tmp != NULL; tmp=tmp->next)
         if (strcmp(tmp->key, key) == 0)
             return tmp;
     return NULL;
@@ -250,17 +250,17 @@ StrHash *find_hash(StrHash *hash, const char *key)
 static void
 free_one_request(Request *req)
 {
-    StrHash *hash;
-    for (hash=req->query; hash != NULL; hash=hash->next){
-        free(hash->key);
-        free(hash->val);
-        free(hash);
+    Table *table;
+    for (table=req->query; table != NULL; table=table->next){
+        free(table->key);
+        free(table->val);
+        free(table);
     }
 
-    for (hash=req->header; hash != NULL; hash=hash->next){
-        free(hash->key);
-        free(hash->val);
-        free(hash);
+    for (table=req->header; table != NULL; table=table->next){
+        free(table->key);
+        free(table->val);
+        free(table);
     }
     free(req->path);
     json_object_put(req->write_data);
@@ -311,9 +311,9 @@ static char *get_dat_path(void)
     return r;
 }
 
-static char *hash_dump(StrHash *h)
+static char *table_dump(Table *h)
 {
-    StrHash *tmp;
+    Table *tmp;
     char *ret = NULL;
 
 #ifdef DEBUG
@@ -361,14 +361,37 @@ static char *hash_dump(StrHash *h)
         free(val);
     }
 #ifdef DEBUG
-    printf("hash dump: %s\n", ret);
+    printf("table dump: %s\n", ret);
 #endif
     return ret;
 }
 
-static StrHash *hash_load(const char *str)
+/*
+ * 删除table节点
+ * return 0 删除成功, -1 没有该值
+ */
+int delete_table(Table **root, const char *key)
 {
-    StrHash *hash = NULL;
+    Table *t, *prev = NULL;
+    for (t = *root; t != NULL; prev=t, t = t->next)
+        if (strcmp(key, t->key) == 0)
+            break;
+    if (t == NULL)
+        return -1;
+    if (prev == NULL)
+        *root = t->next;
+    else{
+        prev->next = t->next;
+    }
+    free(t->key);
+    free(t->val);
+    free(t);
+    return 0;
+}
+
+static Table *table_load(const char *str)
+{
+    Table *table = NULL;
     char buf[BUFSIZ], *key=NULL, *val=NULL;
     enum STATE {NONE, KEY, VALUE, DONE};
     enum STATE state = KEY;
@@ -400,7 +423,7 @@ static StrHash *hash_load(const char *str)
                 curl_free(ev);
                 i = 0;
 
-                append_hash(&hash, key, val);
+                append_table(&table, key, val);
                 free(key);
                 free(val);
                 key = NULL;
@@ -410,9 +433,9 @@ static StrHash *hash_load(const char *str)
         }
     }
     if (key != NULL && val != NULL){
-        append_hash(&hash, key, val);
+        append_table(&table, key, val);
     }
-    return hash;
+    return table;
 }
 
 static char *fscanfstr(FILE *fp, const char *format)
@@ -499,8 +522,8 @@ void request_load(void)
 #ifdef DEBUG
                 printf("%s\n", querystr);
 #endif
-                StrHash *query;
-                query = hash_load(querystr);
+                Table *query;
+                query = table_load(querystr);
                 req = find_request(rc, pth, method);
                 req->query = query;
                 count = count_n(fp);
@@ -520,8 +543,8 @@ void request_load(void)
 #ifdef DEBUG
                 printf("%s\n", headerstr);
 #endif
-                StrHash *header;
-                header = hash_load(headerstr);
+                Table *header;
+                header = table_load(headerstr);
                 req = find_request(rc, pth, method);
                 req->header = header;
                 free(headerstr);
@@ -575,7 +598,7 @@ void request_dump(void)
             fprintf(fp, "%d\n", req->method);
             if(req->query){
                 char *query;
-                query = hash_dump(req->query);
+                query = table_dump(req->query);
                 if (query != NULL){
                     fwrite(query, strlen(query), sizeof(char), fp);
                     free(query);
@@ -585,7 +608,7 @@ void request_dump(void)
             }
             fputc('\n', fp);
             if (req->header){
-                char *header = hash_dump(req->header);
+                char *header = table_dump(req->header);
                 if (header != NULL){
                     fwrite(header, strlen(header), sizeof(char), fp);
                     free(header);
@@ -638,7 +661,7 @@ static char *get_request_url(const RequestContainer *rc, const Request *req)
 struct curl_slist *parse_request_header(Request *req)
 {
     struct curl_slist *chunk = NULL;
-    StrHash *tmp;
+    Table *tmp;
 
     for (tmp = req->header; tmp != NULL; tmp=tmp->next){
         char *ret = (char *)malloc(sizeof(char) + (strlen(tmp->key) + strlen(tmp->val) + 3));
@@ -825,7 +848,7 @@ static char *parse_request_query(const RequestContainer *rc, const Request *req)
     }
     enum STATE {NONE, M1, START, END};
     enum STATE state = NONE;
-    StrHash *query = req->query;
+    Table *query = req->query;
     char buf[BUFSIZ], *ret;
     if ((ret = (char *) malloc(sizeof(char) * (BUFSIZ + 1))) == NULL){
         perror("Memory empty");
@@ -979,6 +1002,9 @@ request_run(RequestContainer *rc, Request *req)
         if (obj == NULL){
             printf("\nText Response >>>\n %s\n", str);
         }else{
+            if (req->write_data != NULL)
+                json_object_put(req->write_data);
+
             req->write_data = obj;
             printf("\nJSON Response >>> \n");
             print_pretty_json(json_object_to_json_string(obj));

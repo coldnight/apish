@@ -517,30 +517,27 @@ add_key_val(int type, const char *str)
     t = dupstr(strchr(str, ' '));
     char *last = strip(t, &n);
     char *val = strchr(last, ' ');
-    if (val != NULL){
-        val = strip(val, &n);
-        char *v;
-        if ((v = dupstr(val)) == NULL) {
-            perror("Memory empty");
-            free(t);
-            return False;
-        }
+    char *v;
 
-        last[strlen(last) - strlen(v) - n] = '\0';
-        printf("Add %s: %s = %s\n", type == 1 ? "Parameter" : "Header", last, v);
-        if (type == 1)
-            add_query(current_req, last, v);
-        else
-            add_header(current_req, last, v);
-        free(v);
+    if (val == NULL){
+        val = "";
     }else{
-        char *val = type == 1 ? find_query(current_req, last) : find_header(current_req, last);
-        if (val == NULL){
-            printf("Key Error: %s\n", last);
-        }else{
-            printf("\t%-20s:%s\n", last, val);
-        }
+        val = strip(val, &n);
+        last[strlen(last) - strlen(val) - n] = '\0';
     }
+
+    if ((v = dupstr(val)) == NULL) {
+        perror("Memory empty");
+        free(t);
+        return False;
+    }
+
+    printf("Add %s: %s = %s\n", type == 1 ? "Parameter" : "Header", last, v);
+    if (type == 1)
+        add_query(current_req, last, v);
+    else
+        add_header(current_req, last, v);
+    free(v);
     free(t);
     return True;
 }
@@ -550,7 +547,7 @@ static int do_request_p(const char *str)
     if (strncmp(str, "p", 1) != 0)
         return False;
     if (strlen(str) == 1){
-        StrHash *query;
+        Table *query;
         printf("Parameters:\n");
         for (query=current_req->query; query != NULL; query=query->next){
             printf("\t%-10s:\t%s\n", query->key, query->val);
@@ -568,7 +565,7 @@ static int do_request_h(const char *str)
     if (strncmp(str, "h", 1) != 0)
         return False;
     if (strlen(str) == 1){
-        StrHash *header;
+        Table *header;
         printf("Headers:\n");
         for (header=current_req->header; header != NULL;header =header->next){
             printf("\t%-10s:\t%s\n", header->key, header->val);
@@ -578,6 +575,69 @@ static int do_request_h(const char *str)
     }else{
         return False;
     }
+    return True;
+}
+
+static int do_request_dp(const char *str)
+{
+    if (strncmp(str, "dp", 2) != 0)
+        return False;
+    if (strncmp(str, "dp ", 3) != 0){
+        printf("Usage: dp PARAMETER\n");
+        return True;
+    }
+    char *buf, *temp, *last;
+    int r;
+    if ((buf = dupstr(str)) == NULL){
+        perror("Memory empty");
+        return True;
+    }
+    temp = buf;
+    temp = stripspace(temp);
+    if (strlen(temp) < 4){
+        free(buf);
+        printf("Usage: dp PARAMETER\n");
+        return True;
+    }
+    last = stripspace(strchr(temp, ' '));
+    r = delete_table(&current_req->query, last);
+    if (r == 0){
+        printf("Dropped parameter: %s\n", last);
+    }else{
+        printf("Unknow parameter: %s\n", last);
+    }
+    free(buf);
+    return True;
+}
+
+static int do_request_dh(const char *str)
+{
+    if (strncmp(str, "dh", 2) != 0)
+        return False;
+    if (strncmp(str, "dh ", 3) != 0){
+        printf("Usage: dh HEADER\n");
+        return True;
+    }
+    char *buf, *temp, *last;
+    int r;
+    if ((buf = dupstr(str)) == NULL){
+        perror("Memory empty");
+        return True;
+    }
+    temp = buf;
+    temp = stripspace(temp);
+    if (strlen(temp) < 4){
+        free(buf);
+        printf("Usage: dh HEADER\n");
+    }
+    last = stripspace(strchr(temp, ' '));
+    r = delete_table(&current_req->header, last);
+    if (r == 0){
+        printf("Dropped header: %s\n", last);
+    }else{
+        printf("Unknow header: %s\n", last);
+    }
+    free(buf);
     return True;
 }
 
@@ -614,8 +674,10 @@ void command_init(void)
     create_command(containercc, "verbose", "Show verbose", do_container_verbose);
 
     requestcc = create_command_container("request");
-    create_command(requestcc, "p", "Show/Change/Add parameter", do_request_p);
-    create_command(requestcc, "h", "Show/Change/Add header", do_request_h);
+    create_command(requestcc, "p", "Change/Add parameter", do_request_p);
+    create_command(requestcc, "h", "Change/Add header", do_request_h);
+    create_command(requestcc, "dp", "Drop a parameter", do_request_dp);
+    create_command(requestcc, "dh", "Drop a header", do_request_dh);
     create_command(requestcc, "run", "Run request", do_request_run);
     create_command(requestcc, "help", "Show help info", do_main_help_handler);
     create_command(requestcc, "exit", "Back request list", do_request_exit);
