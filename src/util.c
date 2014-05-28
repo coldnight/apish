@@ -120,7 +120,7 @@ void print_pretty_json(const char *json_str)
     enum ROLE {KEY, VALUE};
     enum ROLE role = KEY;
     int color_started = False;
-    int n = 0;
+    int n = 0, in_list=False;
 
     for (ch = *buf; ch != '\0'; pch = ch, ch = *(++buf), n++){
 
@@ -132,8 +132,10 @@ void print_pretty_json(const char *json_str)
             print_level_string(level);
             if (ch == '{')
                 role = KEY;
-            else
+            else{
                 role = VALUE;
+                in_list = True;
+            }
         }else if ((ch == '}' || ch == ']') && single_q == NONE && double_q == NONE ){
             if (color_started){
                 print_color_end();
@@ -145,6 +147,8 @@ void print_pretty_json(const char *json_str)
             print_level_string(level);
             putchar(ch);
             wrap=True;
+            if (ch == ']')
+                in_list = False;
         }else if (ch == ',' && (single_q == NONE && double_q == NONE)){
             if (color_started){
                 print_color_end();
@@ -156,7 +160,8 @@ void print_pretty_json(const char *json_str)
             print_level_string(level);
             if (wrap)
                 wrap = False;
-            role = KEY;
+            if (!in_list)
+                role = KEY;
         }else if ( wrapped && ch == ' ')
             continue;
         else{
