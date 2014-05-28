@@ -16,6 +16,7 @@ extern char *get_lock_path(const char*);
 extern void print_pretty_json(const char *);
 extern char *dupstr(const char *);
 extern char *stripspace(char *);
+extern void perrormsg(const char *, ...);
 
 #ifdef __cplusplus
 }

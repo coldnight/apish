@@ -5,6 +5,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <sys/stat.h>
+#include <stdarg.h>
 
 int file_exists(const char *path)
 {
@@ -84,6 +85,25 @@ static void print_level_string(int level){
     }
 }
 
+static void print_color_start(const char *color)
+{
+    const char *out;
+    if (strcmp(color, "red") == 0)
+        out = "\033[0;31;5m";
+    else if (strcmp(color, "green") == 0)
+        out = "\033[0;32;5m";
+    else if (strcmp(color, "blue") == 0)
+        out = "\033[0;34;5m";
+    else
+        out = "\033[0;37;0m";
+    printf("%s", out);
+}
+
+static void print_color_end(void)
+{
+    printf("\033[0m");
+}
+
 void print_pretty_json(const char *json_str)
 {
     char *buf;
@@ -97,6 +117,9 @@ void print_pretty_json(const char *json_str)
     enum QUOTE {NONE, SQ};
     enum QUOTE single_q = NONE;
     enum QUOTE double_q = NONE;
+    enum ROLE {KEY, VALUE};
+    enum ROLE role = KEY;
+    int color_started = False;
     int n = 0;
 
     for (ch = *buf; ch != '\0'; pch = ch, ch = *(++buf), n++){
@@ -107,7 +130,15 @@ void print_pretty_json(const char *json_str)
             putchar('\n');
             wrapped = True;
             print_level_string(level);
+            if (ch == '{')
+                role = KEY;
+            else
+                role = VALUE;
         }else if ((ch == '}' || ch == ']') && single_q == NONE && double_q == NONE ){
+            if (color_started){
+                print_color_end();
+                color_started = False;
+            }
             putchar('\n');
             wrapped = True;
             level--;
@@ -115,20 +146,57 @@ void print_pretty_json(const char *json_str)
             putchar(ch);
             wrap=True;
         }else if (ch == ',' && (single_q == NONE && double_q == NONE)){
+            if (color_started){
+                print_color_end();
+                color_started = False;
+            }
             putchar(ch);
             putchar('\n');
             wrapped = True;
             print_level_string(level);
             if (wrap)
                 wrap = False;
+            role = KEY;
         }else if ( wrapped && ch == ' ')
             continue;
         else{
-            if (ch == '\'' && pch != '\\')
+            if (single_q == NONE && double_q == NONE && ch == ':'){
+                role = VALUE;
+            }
+            if (ch == '\'' && pch != '\\' && role == VALUE){
                 single_q = single_q == SQ ? NONE : SQ;
-            if (ch == '"' && pch != '\\')
+                if (single_q == SQ){
+                    print_color_start("green");
+                    putchar(ch);
+                }else{
+                    putchar(ch);
+                    print_color_end();
+                }
+            }
+            else if (ch == '"' && pch != '\\' && role == VALUE){
                 double_q = double_q == SQ ? NONE : SQ;
-            putchar(ch);
+                if (double_q == SQ){
+                    print_color_start("green");
+                    putchar(ch);
+                }else{
+                    putchar(ch);
+                    print_color_end();
+                }
+            }else{
+                if (role == KEY &&
+                        ((ch == '\'' && pch != '\\') ||
+                         (ch == '"' && pch != '\\')))
+                    ;
+                else if (role == VALUE && ch != ' ' && ch != '\'' &&
+                        ch != '"' && ch != ':' && !color_started &&
+                        single_q == NONE && double_q == NONE){
+                    print_color_start("red");
+                    color_started = True;
+                    putchar(ch);
+                }
+                else
+                    putchar(ch);
+            }
             wrap = False;
             wrapped = False;
         }
@@ -160,4 +228,17 @@ char *stripspace(char *string)
         t--;
     *(++t) = '\0';
     return s;
+}
+
+void perrormsg(const char *tip, ...)
+{
+    va_list ap;
+    char *i;
+
+    fprintf(stderr, "\033[;31;1m%s\033[0m: ", tip);
+    va_start(ap, tip);
+    for (i = va_arg(ap, char *); i != NULL; i = va_arg(ap, char *))
+        fprintf(stderr, "%s", i);
+    va_end(ap);
+    putchar('\n');
 }
