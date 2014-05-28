@@ -93,25 +93,28 @@ void print_pretty_json(const char *json_str)
     }
     strcpy(buf, json_str);
     char *o = buf;
-    int level = 0, ch, wrap=False, wrapped = False;
+    int level = 0, ch, wrap=False, wrapped = False, pch;
+    enum QUOTE {NONE, SQ};
+    enum QUOTE single_q = NONE;
+    enum QUOTE double_q = NONE;
     int n = 0;
 
-    for (ch = *buf; ch != '\0'; ch = *(++buf), n++){
+    for (ch = *buf; ch != '\0'; pch = ch, ch = *(++buf), n++){
 
-        if (ch == '{' || ch == '['){
+        if ((ch == '{' || ch == '[') && single_q == NONE && double_q == NONE){
             level++;
             putchar(ch);
             putchar('\n');
             wrapped = True;
             print_level_string(level);
-        }else if (ch == '}' || ch == ']'){
+        }else if ((ch == '}' || ch == ']') && single_q == NONE && double_q == NONE ){
             putchar('\n');
             wrapped = True;
             level--;
             print_level_string(level);
             putchar(ch);
             wrap=True;
-        }else if (ch == ','){
+        }else if (ch == ',' && (single_q == NONE && double_q == NONE)){
             putchar(ch);
             putchar('\n');
             wrapped = True;
@@ -121,6 +124,10 @@ void print_pretty_json(const char *json_str)
         }else if ( wrapped && ch == ' ')
             continue;
         else{
+            if (ch == '\'' && pch != '\\')
+                single_q = single_q == SQ ? NONE : SQ;
+            if (ch == '"' && pch != '\\')
+                double_q = double_q == SQ ? NONE : SQ;
             putchar(ch);
             wrap = False;
             wrapped = False;
