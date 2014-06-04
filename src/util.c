@@ -104,7 +104,7 @@ static void print_color_end(void)
     printf("\033[0m");
 }
 
-void print_pretty_json(const char *json_str)
+void fprint_pretty_json(FILE *stream, const char *json_str, int colored)
 {
     char *buf;
     if ((buf = (char *)malloc(sizeof(char) * (strlen(json_str) + 1))) == NULL){
@@ -126,8 +126,8 @@ void print_pretty_json(const char *json_str)
 
         if ((ch == '{' || ch == '[') && single_q == NONE && double_q == NONE){
             level++;
-            putchar(ch);
-            putchar('\n');
+            fputc(ch, stream);
+            fputc('\n', stream);
             wrapped = True;
             print_level_string(level);
             if (ch == '{')
@@ -141,21 +141,21 @@ void print_pretty_json(const char *json_str)
                 print_color_end();
                 color_started = False;
             }
-            putchar('\n');
+            fputc('\n', stream);
             wrapped = True;
             level--;
             print_level_string(level);
-            putchar(ch);
+            fputc(ch, stream);
             wrap=True;
             if (ch == ']')
                 in_list = False;
-        }else if (ch == ',' && (single_q == NONE && double_q == NONE)){
+        }else if (ch == ',' && single_q == NONE && double_q == NONE){
             if (color_started){
                 print_color_end();
                 color_started = False;
             }
-            putchar(ch);
-            putchar('\n');
+            fputc(ch, stream);
+            fputc('\n', stream);
             wrapped = True;
             print_level_string(level);
             if (wrap)
@@ -168,17 +168,19 @@ void print_pretty_json(const char *json_str)
             if (single_q == NONE && double_q == NONE && ch == ':'){
                 role = VALUE;
             }
-            if (ch == '\'' && pch != '\\' && role == VALUE){
+            if (ch == '\'' && pch != '\\' && role == VALUE && colored){
                 single_q = single_q == SQ ? NONE : SQ;
                 if (single_q == SQ){
-                    print_color_start("green");
-                    putchar(ch);
+                    if (colored)
+                        print_color_start("green");
+                    fputc(ch, stream);
                 }else{
-                    putchar(ch);
-                    print_color_end();
+                    fputc(ch, stream);
+                    if (colored)
+                        print_color_end();
                 }
             }
-            else if (ch == '"' && pch != '\\' && role == VALUE){
+            else if (ch == '"' && pch != '\\' && role == VALUE && colored){
                 double_q = double_q == SQ ? NONE : SQ;
                 if (double_q == SQ){
                     print_color_start("green");
@@ -190,27 +192,31 @@ void print_pretty_json(const char *json_str)
             }else{
                 if (role == KEY &&
                         ((ch == '\'' && pch != '\\') ||
-                         (ch == '"' && pch != '\\')))
+                         (ch == '"' && pch != '\\')) && colored)
                     ;
                 else if (role == VALUE && ch != ' ' && ch != '\'' &&
                         ch != '"' && ch != ':' && !color_started &&
-                        single_q == NONE && double_q == NONE){
+                        single_q == NONE && double_q == NONE && colored){
                     print_color_start("red");
                     color_started = True;
-                    putchar(ch);
+                    fputc(ch, stream);
+                }else{
+                    fputc(ch, stream);
                 }
-                else
-                    putchar(ch);
             }
             wrap = False;
             wrapped = False;
         }
     }
-    /* printf("Done\n\n"); */
-    putchar('\n');
+    fputc('\n', stream);
     free(o);
 }
 
+
+void print_pretty_json(const char *json_str)
+{
+    fprint_pretty_json(stdout, json_str, 1);
+}
 
 char *dupstr(const char *s)
 {
@@ -235,15 +241,15 @@ char *stripspace(char *string)
     return s;
 }
 
-void perrormsg(const char *tip, ...)
+void perrormsg(const char *tip, int n, ...)
 {
     va_list ap;
-    char *i;
+    int i;
 
     fprintf(stderr, "\033[;31;1m%s\033[0m: ", tip);
-    va_start(ap, tip);
-    for (i = va_arg(ap, char *); i != NULL; i = va_arg(ap, char *))
-        fprintf(stderr, "%s", i);
+    va_start(ap, n);
+    for (i = 0; i < n; i++)
+        fprintf(stderr, "%s", va_arg(ap, char *));
     va_end(ap);
     putchar('\n');
 }

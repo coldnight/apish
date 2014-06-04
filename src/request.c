@@ -695,7 +695,7 @@ parse_query_value(const RequestContainer *rc, const Request *req, const char *bu
     int index = -1, i;
     sscanf(buf, "%d", &index);
     if (index == -1){
-        perrormsg("Request Index Error", buf);
+        perrormsg("Request Index Error", 1, buf);
         return NULL;
     }
     Request *tmp = rc->requests;
@@ -704,19 +704,19 @@ parse_query_value(const RequestContainer *rc, const Request *req, const char *bu
             ;
 
         if (i != index || tmp == rc->requests){
-            perrormsg("Request Index Error", buf);
+            perrormsg("Request Index Error", 1, buf);
             return NULL;
         }
     }
     if (tmp == req){
-        perrormsg("Request Reference Error", buf, " reference its own\n");
+        perrormsg("Request Reference Error", 2, buf, " reference its own\n");
         return NULL;
     }
      struct json_object *obj, *tmpobj;
     if (tmp->write_data == NULL){
         tmpobj = request_run((RequestContainer *)rc, tmp);
         if (tmpobj == NULL){
-            perrormsg("Request Denpendence Error", buf, " denpendence NOT return JSON object\n");
+            perrormsg("Request Denpendence Error", 2,  buf, " denpendence NOT return JSON object\n");
             return NULL;
         }
         obj = json_tokener_parse(json_object_to_json_string(tmpobj));
@@ -753,7 +753,7 @@ parse_query_value(const RequestContainer *rc, const Request *req, const char *bu
                 t[ti++] = ch;
                 need_redge = 1;
             }else if (ch == ']'){
-                perrormsg("Empty Brackets Error", buf);
+                perrormsg("Empty Brackets Error", 1, buf);
                 goto error;
             }
         }else if (state == DOTKEY){
@@ -763,7 +763,7 @@ parse_query_value(const RequestContainer *rc, const Request *req, const char *bu
                 t[ti] = '\0';
                 ti = 0;
                 if (!json_object_object_get_ex(obj, t, &obj)){
-                    perrormsg("Key Eerror", t, " in ", buf);
+                    perrormsg("Key Eerror", 3,  t, " in ", buf);
                     goto error;
                 }
                 if (ch == '.'){
@@ -780,7 +780,7 @@ parse_query_value(const RequestContainer *rc, const Request *req, const char *bu
                 t[ti] = '\0';
                 ti = 0;
                 if (!json_object_object_get_ex(obj, t, &obj)){
-                    perrormsg("Key Eerror", t, buf);
+                    perrormsg("Key Eerror", 2, t, buf);
                     goto error;
                 }
                 need_redge = 1;
@@ -790,7 +790,7 @@ parse_query_value(const RequestContainer *rc, const Request *req, const char *bu
                 need_redge = 0;
                 state = NONE;
             }else if (ch != ' '){
-                perrormsg("Brackets Right Edge Error", buf);
+                perrormsg("Brackets Right Edge Error", 1, buf);
                 goto error;
             }
         }else if (state == INDEX){
@@ -807,18 +807,18 @@ parse_query_value(const RequestContainer *rc, const Request *req, const char *bu
     }
     if (state == STRKEY && need_quote){
         char b[2] = {q, '\0'};
-        perrormsg("Quote Error", b, " is not closed: ", buf);
+        perrormsg("Quote Error", 3, b, " is not closed: ", buf);
         goto error;
     }
     if (state == DOTKEY){
         t[ti] = '\0';
         if (!json_object_object_get_ex(obj, t, &obj)){
-            perrormsg("Key Error", t, " in ", buf);
+            perrormsg("Key Error", 3, t, " in ", buf);
             goto error;
         }
     }
     if (need_redge){
-        perrormsg("Brackets Right Edge Error", buf);
+        perrormsg("Brackets Right Edge Error", 1, buf);
         goto error;
     }
     char *r;
