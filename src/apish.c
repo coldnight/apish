@@ -6,26 +6,39 @@
 
 
 static void help_info(const char *exe_name);
+int global_colored = 0;
+
     int
 main(int argc, char **argv)
 {
-    int ch, run=False;
+    int ch, run=False, dump = True;
     char *path = NULL, *out=NULL;
-    while ((ch = getopt(argc, argv, "f:o::rh")) != -1){
+    while ((ch = getopt(argc, argv, "::rhnc")) != -1){
         switch(ch){
-            case 'f':
-                path = dupstr(optarg);
-                break;
             case 'o':
                 out = dupstr(optarg);
                 break;
             case 'r':
                 run = True;
                 break;
+            case 'n':
+                dump = False;
+                break;
+            case 'c':
+                global_colored = 1;
+                break;
             case 'h':
                 help_info(*argv);
                 return 0;
+            default:
+                fprintf(stderr, "%s: invalid option '%s'\n", *argv, argv[optind-1]);
+                fprintf(stderr, "Try '%s -h' for more infomation\n", *argv);
+                return 1;
+
         }
+    }
+    if (optind < argc){
+        path = argv[optind];
     }
     if (path == NULL){
         path = get_dat_path();
@@ -37,7 +50,8 @@ main(int argc, char **argv)
     }else{
         command_init();
         command_loop();
-        request_dump(path);
+        if (dump)
+            request_dump(path);
         command_cleanup();
     }
     request_cleanup();
@@ -46,10 +60,15 @@ main(int argc, char **argv)
 
 static void help_info(const char *exe_name)
 {
-    printf("Usage: %s [OPTION]\n", exe_name);
+    printf("Usage: %s [OPTION] [FILENAME]\n\n", exe_name);
+    printf("FILENAME is the input file specified, it can be a non-existent file,\n");
+    printf("empty file or exists file with 'JSON format data'.\n\n");
+    printf("If you DO NOT specify it, the application will use ~/.apish.json as default.\n");
+    printf("If you DO NOT specify '-n' option, and the application will write the modified");
+    printf(" data to it, and the application will erasure the old data\n\n");
     printf("Options:\n");
-    printf("\t-f filename\tThe JSON format file with requests content\n");
-    printf("\t-o filename\tSpecify the out file, default is stdout\n");
     printf("\t-r\t\tJust run the requests and exit\n");
+    printf("\t-n\t\tDO NOT write modified data after exit the shell\n");
+    printf("\t-c\t\tcolorize the output\n");
     printf("\t-h\t\tShow this information\n");
 }

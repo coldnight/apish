@@ -516,6 +516,7 @@ void request_load(const char *path)
         json_object_put(pobj);
         json_object_put(sobj);
         RequestContainer *rc = create_request_container(scheme, host, port);
+        rc->verbose = verbose;
         free(host);
         free(scheme);
 

@@ -6,5 +6,6 @@
 #define DATA_FILE ".apish.json"
 
 /* #define DEBUG */
+extern int global_colored;
 
 #endif

@@ -122,6 +122,9 @@ static void print_color_end(void)
 
 void fprint_pretty_json(FILE *stream, const char *json_str, int colored)
 {
+    if (global_colored != -1){
+        colored = global_colored;
+    }
     char *buf;
     if ((buf = (char *)malloc(sizeof(char) * (strlen(json_str) + 1))) == NULL){
         perror("Memory empty");
