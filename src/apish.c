@@ -81,7 +81,7 @@ static void help_info(const char *exe_name)
     printf("empty file or exists file with 'JSON format data'.\n\n");
     printf("If you DO NOT specify it, the application will use ~/.apish.json as default.\n");
     printf("If you DO NOT specify '-n' option, and the application will write the modified");
-    printf(" data to it, and the application will erasure the old data\n\n");
+    printf(" data to it, and cover the old data\n\n");
     printf("Options:\n");
     printf("\t-c\t\tcolorize the output\n");
     printf("\t-l\t\tlist request containers\n");
