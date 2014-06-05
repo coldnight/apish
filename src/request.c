@@ -424,13 +424,6 @@ static Table *table_load(const char *str)
     return table;
 }
 
-static char *fscanfstr(FILE *fp, const char *format)
-{
-    char buf[BUFSIZ];
-    fscanf(fp, format, buf);
-    return dupstr(buf);
-}
-
 void request_load(const char *path)
 {
     struct json_object *obj, *tmp = NULL;
@@ -498,6 +491,10 @@ void request_load(const char *path)
             }
         }else{
             scheme = dupstr("http");
+        }
+        if (!((strlen(scheme) == 4 && (strcmp(scheme, "http") == 0)) ||
+                (strlen(scheme) == 5 && (strcmp(scheme, "https") == 0)))){
+            perrormsg("Value Error", 1, "scheme must be one of http and https");
         }
 
         // 详细

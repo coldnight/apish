@@ -3,6 +3,7 @@
  */
 #include "request.h"
 
+int global_colored = -1;
     int
 main(void)
 {

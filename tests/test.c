@@ -1,6 +1,9 @@
+#include "apish.h"
 #include "request.h"
 #include "command.h"
 #include <stdio.h>
+
+int global_colored = -1;
 
     int
 main(void)
