@@ -1116,11 +1116,13 @@ request_run(RequestContainer *rc, Request *req)
     return obj;
 }
 
-void request_all_run(void)
+void request_all_run(RequestContainer *rc)
 {
-    RequestContainer *rc;
+    if (rc == NULL)
+        rc = request_container;
+
     Request *req;
-    for (rc = request_container; rc != NULL; rc = rc->next){
+    for (; rc != NULL; rc = rc->next){
         printf(">>>>>>>> Begain %s://%s:%d <<<<<<<<\n", rc->scheme,
                 rc->host, rc->port);
         for (req = rc->requests; req != NULL; req=req->next){
@@ -1132,5 +1134,18 @@ void request_all_run(void)
         }
         printf(">>>>>>>> End %s://%s:%d <<<<<<<<\n", rc->scheme,
                 rc->host, rc->port);
+    }
+}
+
+void list_request_container(void)
+{
+    RequestContainer *rc;
+    int i = 0;
+    for (rc = request_container; rc != NULL; rc = rc->next){
+        int c = 0;
+        Request *req;
+        for (req = rc->requests; req != NULL; c++, req = req->next)
+            ;
+        printf("[%2d] <%s://%s:%d [%2d]>\n", i++, rc->scheme, rc->host, rc->port, c);
     }
 }

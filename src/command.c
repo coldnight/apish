@@ -235,16 +235,7 @@ static int do_main_ls_handler(const char *cmd)
     if (strcmp(cmd, "ls") != 0){
         return False;
     }
-
-    RequestContainer *rc;
-    int i = 0;
-    for (rc = request_container; rc != NULL; rc = rc->next){
-        int c = 0;
-        Request *req;
-        for (req = rc->requests; req != NULL; c++, req = req->next)
-            ;
-        printf("[%2d] <%s://%s:%d [%2d]>\n", i++, rc->scheme, rc->host, rc->port, c);
-    }
+    list_request_container();
     return True;
 }
 
