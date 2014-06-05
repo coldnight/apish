@@ -3,6 +3,7 @@
 
 #define LOCK_SUFFIX ".lock"
 #define LEVEL_STR "  "
+#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -18,6 +19,7 @@ extern char *dupstr(const char *);
 extern char *stripspace(char *);
 extern void perrormsg(const char *, int, ...);
 extern char *get_dat_path(void);
+extern void fprint_pretty_json(FILE *, const char *, int);
 
 #ifdef __cplusplus
 }

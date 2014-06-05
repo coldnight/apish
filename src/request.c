@@ -431,20 +431,13 @@ static char *fscanfstr(FILE *fp, const char *format)
     return dupstr(buf);
 }
 
-static int count_n(FILE *fp){
-    int i = fgetc(fp), c=0;
-    for(; i == '\n'; c++, i=fgetc(fp))
-        ;
-    ungetc(i, fp);
-    return c;
-}
-
 void request_load(const char *path)
 {
     struct json_object *obj, *tmp = NULL;
     int i = 0;
     if (!file_exists(path)){
         perrormsg("Error", 1, path, " is not exists");
+        return;
     }
     obj = json_object_from_file(path);
     if (obj == NULL){
@@ -652,16 +645,84 @@ void request_dump(const char *path)
     if (path == NULL)
         path = get_dat_path();
     char *lpath = get_lock_path(path);
+
     if (is_file_locked(path))
         return;
     FILE *fp;
     RequestContainer *rc;
+    Request *req;
+    struct json_object *root_object, *containers, *container, *requests;
+    struct json_object *request, *pobj, *hobj;
+    Table *table;
+
+    root_object = json_object_new_object();
+    containers = json_object_new_array();
+    json_object_object_add(root_object, "containers", containers);
+    json_object_get(containers);
+
+    for (rc = request_container; rc != NULL; rc = rc->next){
+        container = json_object_new_object();
+        json_object_array_add(containers, container);
+        json_object_get(container);
+
+        json_object_object_add(container, "scheme",
+                json_object_new_string(rc->scheme));
+        json_object_object_add(container, "host",
+                json_object_new_string(rc->host));
+        json_object_object_add(container, "verbose",
+                json_object_new_boolean(rc->verbose));
+        json_object_object_add(container, "port",
+                json_object_new_int(rc->port));
+
+        requests = json_object_new_array();
+        json_object_object_add(container, "requests", requests);
+        json_object_get(requests);
+
+        for (req = rc->requests; req != NULL; req = req->next){
+            request = json_object_new_object();
+            json_object_array_add(requests, request);
+            json_object_get(request);
+
+            json_object_object_add(request, "path",
+                    json_object_new_string(req->path));
+            json_object_object_add(request, "post",
+                    json_object_new_boolean(req->method == POST));
+
+            pobj = json_object_new_object();
+            json_object_object_add(request, "params", pobj);
+            json_object_get(pobj);
+
+            for (table = req->query; table != NULL; table = table->next){
+                json_object_object_add(pobj, table->key,
+                        json_object_new_string(table->val));
+            }
+            json_object_put(pobj);
+
+            hobj = json_object_new_object();
+            json_object_object_add(request, "header", hobj);
+            json_object_get(hobj);
+
+            for (table=req->header; table != NULL; table = table->next){
+                json_object_object_add(hobj, table->key,
+                        json_object_new_string(table->val));
+            }
+            json_object_put(hobj);
+            json_object_put(request);
+        }
+        json_object_put(requests);
+        json_object_put(container);
+    }
+    json_object_put(containers);
 
     fp = fopen(lpath, "w");
     if (fp == NULL){
-        perror(path);
+        perror(lpath);
         return;
     }
+    fprint_pretty_json(fp, json_object_to_json_string(root_object), 0);
+    fclose(fp);
+    rename(lpath, path);
+    json_object_put(root_object);
 }
 
 static char *get_request_url(const RequestContainer *rc, const Request *req)
@@ -913,7 +974,7 @@ static char *parse_request_query(const RequestContainer *rc, const Request *req)
                 if (ch == '}'){
                     buf[i] = '\0';
                     state = NONE;
-                    char *r = parse_query_value(rc, req, buf);
+                    char *r = parse_query_value(rc, req, stripspace(buf));
                     if (r == NULL){
                         free(ret);
                         free(rv);
