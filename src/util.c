@@ -122,7 +122,7 @@ static void print_color_end(void)
 
 void fprint_pretty_json(FILE *stream, const char *json_str, int colored)
 {
-    if (global_colored != -1){
+    if (global_colored != -1 && colored){
         colored = global_colored;
     }
     char *buf;
