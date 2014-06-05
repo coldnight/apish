@@ -1,3 +1,5 @@
 *.o
 apish
 *.py[co]
+tests/test
+tests/test_load

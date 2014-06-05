@@ -42,7 +42,7 @@ typedef struct REQCONTAINER{
 extern RequestContainer *create_request_container(const char *, const char *, int);
 extern int delete_request_container(int);
 extern RequestContainer *find_request_container(const char *, const char *, int);
-extern void add_request(RequestContainer *, const char *, method_t);
+extern Request *add_request(RequestContainer *, const char *, method_t);
 extern int delete_request(RequestContainer *, int);
 extern Request *find_request(RequestContainer *, const char *, method_t);
 extern Table *find_table(Table *, const char *key);
@@ -52,11 +52,12 @@ extern char *find_query(Request *, const char *);
 extern void add_header(Request *, const char *, const char *);
 extern char *find_header(Request *, const char *);
 extern void free_container();
-extern void request_load(void);
-extern void request_dump(void);
+extern void request_load(const char *path);
+extern void request_dump(const char *path);
 extern void request_init(void);
 extern void request_cleanup(void);
 extern struct json_object *request_run(RequestContainer*, Request *);
+extern void request_all_run(void);
 
 extern RequestContainer *request_container;
 

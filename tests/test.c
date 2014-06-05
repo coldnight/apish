@@ -19,7 +19,7 @@ main(void)
     req = find_request(rc, "/i/signup", POST);
     add_query(req, "token", "to&o");
     create_request_container(HTTP_SCHEME, "103.30.41.9", 8089);
-    request_dump();
+    request_dump("test.json");
     request_cleanup();
     printf("Test Done!\n");
     return 0;

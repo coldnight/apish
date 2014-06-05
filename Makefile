@@ -11,7 +11,7 @@ apish: clean request.o command.o util.o
 
 test: clean request.o command.o util.o
 	${CC} ${FLAGS} ${CFLAGS} ${LDFLAGS} command.o request.o util.o tests/test.c -o tests/test
-	tests/test
+	${CC} ${FLAGS} ${CFLAGS} ${LDFLAGS} command.o request.o util.o tests/test_load.c -o tests/test_load
 
 
 request.o:

@@ -3,7 +3,7 @@
 
 #define False 0
 #define True 1
-#define DATA_FILE ".apish.dat"
+#define DATA_FILE ".apish.json"
 
 /* #define DEBUG */
 

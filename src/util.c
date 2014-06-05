@@ -17,6 +17,22 @@ int file_exists(const char *path)
     }
 }
 
+char *get_dat_path(void)
+{
+    char *hp = getenv("HOME");
+    if (hp == NULL)
+        return DATA_FILE;
+    char *r = (char *) malloc(sizeof(char) * (strlen(hp) + strlen(DATA_FILE) + 2));
+    if (r == NULL){
+        perror("memory empty");
+        return DATA_FILE;
+    }
+    strcpy(r, hp);
+    strcat(r, "/");
+    strcat(r, DATA_FILE);
+    return r;
+}
+
 char *get_lock_path(const char *path)
 {
     char *tmp;
