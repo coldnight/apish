@@ -57,8 +57,9 @@ extern void request_dump(const char *path);
 extern void request_init(void);
 extern void request_cleanup(void);
 extern struct json_object *request_run(RequestContainer*, Request *);
-extern void request_all_run(RequestContainer *);
+extern void request_all_run(void);
 extern void list_request_container(void);
+extern void request_run_container(RequestContainer *);
 
 extern RequestContainer *request_container;
 

@@ -1116,24 +1116,30 @@ request_run(RequestContainer *rc, Request *req)
     return obj;
 }
 
-void request_all_run(RequestContainer *rc)
+void request_run_container(RequestContainer *rc)
 {
-    if (rc == NULL)
-        rc = request_container;
-
     Request *req;
+    printf(">>>>>>>> Begain %s://%s:%d <<<<<<<<\n", rc->scheme,
+            rc->host, rc->port);
+    for (req = rc->requests; req != NULL; req=req->next){
+        printf("========== Request %s %s ==========\n",
+                req->method == POST ? "POST" : "GET", req->path);
+        request_run(rc, req);
+        printf("========== End Request %s %s ==========\n",
+                req->method == POST ? "POST" : "GET", req->path);
+    }
+    printf(">>>>>>>> End %s://%s:%d <<<<<<<<\n", rc->scheme,
+            rc->host, rc->port);
+
+}
+
+void request_all_run(void)
+{
+    RequestContainer *rc = request_container;
+
+
     for (; rc != NULL; rc = rc->next){
-        printf(">>>>>>>> Begain %s://%s:%d <<<<<<<<\n", rc->scheme,
-                rc->host, rc->port);
-        for (req = rc->requests; req != NULL; req=req->next){
-            printf("========== Request %s %s ==========\n",
-                    req->method == POST ? "POST" : "GET", req->path);
-            request_run(rc, req);
-            printf("========== End Request %s %s ==========\n",
-                    req->method == POST ? "POST" : "GET", req->path);
-        }
-        printf(">>>>>>>> End %s://%s:%d <<<<<<<<\n", rc->scheme,
-                rc->host, rc->port);
+        request_run_container(rc);
     }
 }
 
