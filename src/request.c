@@ -429,12 +429,12 @@ void request_load(const char *path)
     struct json_object *obj, *tmp = NULL;
     int i = 0;
     if (!file_exists(path)){
-        perrormsg("Error", 1, path, " is not exists");
+        perrormsg("Warnning", 2, path, " is not exists");
         return;
     }
     obj = json_object_from_file(path);
     if (obj == NULL){
-        perrormsg("Error", 2, path, "is empty or not a JSON file");
+        perrormsg("Warnning", 2, path, "is empty or not a file with JSON format data");
         return;
     }
     if (!json_object_object_get_ex(obj, "containers", &obj)){
@@ -644,8 +644,10 @@ void request_dump(const char *path)
         path = get_dat_path();
     char *lpath = get_lock_path(path);
 
-    if (is_file_locked(path))
+    if (is_file_locked(path)){
+        perrormsg("Lock Error", 2, path, " is locked\n");
         return;
+    }
     FILE *fp;
     RequestContainer *rc;
     Request *req;
