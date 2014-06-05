@@ -12,6 +12,7 @@ static void free_request(RequestContainer *);
 static void free_one_container(RequestContainer *);
 static void free_one_request(Request *);
 static char *parse_request_query(const RequestContainer *, const Request *);
+static void request_requests_load(RequestContainer *, struct json_object *);
 
 RequestContainer * request_container = NULL;
 static CURL *easy_handler = NULL;
@@ -132,7 +133,7 @@ find_request_container(const char *scheme,const  char *host, int port)
 }
 
 
-void
+Request *
 add_request(RequestContainer *reqcont, const char *path, method_t method)
 {
     Request *tmp;
@@ -140,14 +141,14 @@ add_request(RequestContainer *reqcont, const char *path, method_t method)
 
     tmp = find_request(reqcont, path, method);
     if (tmp != NULL)
-        return;
+        return NULL;
 
     if ((p = dupstr(path)) == NULL){
-        return;
+        return NULL;
     }
     if ((tmp = (Request *)malloc(sizeof(Request))) == NULL){
         perror("memory is empty");
-        return;
+        return NULL;
     }
     tmp->path = p;
     tmp->method = method;
@@ -163,6 +164,7 @@ add_request(RequestContainer *reqcont, const char *path, method_t method)
             ;
         o->next = tmp;
     }
+    return tmp;
 }
 
 
@@ -294,22 +296,6 @@ free_container()
     }
 }
 
-
-static char *get_dat_path(void)
-{
-    char *hp = getenv("HOME");
-    if (hp == NULL)
-        return DATA_FILE;
-    char *r = (char *) malloc(sizeof(char) * (strlen(hp) + strlen(DATA_FILE) + 2));
-    if (r == NULL){
-        perror("memory empty");
-        return DATA_FILE;
-    }
-    strcpy(r, hp);
-    strcat(r, "/");
-    strcat(r, DATA_FILE);
-    return r;
-}
 
 static char *table_dump(Table *h)
 {
@@ -445,188 +431,299 @@ static char *fscanfstr(FILE *fp, const char *format)
     return dupstr(buf);
 }
 
-static int count_n(FILE *fp){
-    int i = fgetc(fp), c=0;
-    for(; i == '\n'; c++, i=fgetc(fp))
-        ;
-    ungetc(i, fp);
-    return c;
+void request_load(const char *path)
+{
+    struct json_object *obj, *tmp = NULL;
+    int i = 0;
+    if (!file_exists(path)){
+        perrormsg("Error", 1, path, " is not exists");
+        return;
+    }
+    obj = json_object_from_file(path);
+    if (obj == NULL){
+        perrormsg("Error", 2, path, "is empty or not a JSON file");
+        return;
+    }
+    if (!json_object_object_get_ex(obj, "containers", &obj)){
+        perrormsg("Data Format Error", 1, "need containers key");
+        return;
+    }
+    if (!json_object_is_type(obj, json_type_array)){
+        perrormsg("Data Format Error", 1, "containers must be a array");
+        goto error;
+    }
+    for (i = 0; i < json_object_array_length(obj); i++){
+        char *host, *scheme;
+        int port=80, verbose = False;
+        struct json_object *hobj, *sobj, *pobj, *vobj, *requests;
+        tmp = json_object_array_get_idx(obj, i);
+        if (!json_object_is_type(tmp, json_type_object)){
+            json_object_put(tmp);
+            perrormsg("Type Error", 1, "containers item must be an object");
+            goto error;
+        }
+
+        /* 获取主机名 */
+        if (!json_object_object_get_ex(tmp, "host", &hobj)){
+            perrormsg("Key Required", 1, "you must specify host");
+            goto error;
+        }
+        if (json_object_is_type(hobj, json_type_string)){
+            host = dupstr(json_object_get_string(hobj));
+        }else{
+            json_object_put(hobj);
+            perrormsg("Type Error", 1, "host must be a string value");
+            goto error;
+        }
+
+        // 端口
+        if (json_object_object_get_ex(tmp, "port", &pobj)){
+            if (json_object_is_type(pobj, json_type_int)){
+                port = json_object_get_int(pobj);
+            }else{
+                json_object_put(pobj);
+                perrormsg("Type Error", 1, "port must be an int value");
+                goto error;
+            }
+        }
+
+        // 协议
+        if (json_object_object_get_ex(tmp, "scheme", &sobj)){
+            if (json_object_is_type(sobj, json_type_string)){
+                scheme = dupstr(json_object_get_string(sobj));
+            }else{
+                json_object_put(sobj);
+                perrormsg("Type Error", 1, "scheme must be a string value");
+                goto error;
+            }
+        }else{
+            scheme = dupstr("http");
+        }
+
+        // 详细
+        if (json_object_object_get_ex(tmp, "verbose", &vobj)){
+            if (json_object_is_type(vobj, json_type_boolean)){
+                verbose = json_object_get_boolean(vobj);
+            }else{
+                json_object_put(vobj);
+                perrormsg("Type Error", 1, "verbose must be a boolean value");
+                goto error;
+            }
+        }
+
+        json_object_put(vobj);
+        json_object_put(hobj);
+        json_object_put(pobj);
+        json_object_put(sobj);
+        RequestContainer *rc = create_request_container(scheme, host, port);
+        rc->verbose = verbose;
+        free(host);
+        free(scheme);
+
+        // requests
+        if (json_object_object_get_ex(tmp, "requests", &requests)){
+            if (json_object_is_type(requests, json_type_array)){
+                request_requests_load(rc, requests);
+            }else{
+                json_object_put(requests);
+                perrormsg("Type Error", 1, "requests must be a array");
+                goto error;
+            }
+        }
+    }
+    return;
+error:
+    json_object_put(obj);
+    if (tmp != NULL){
+        json_object_put(tmp);
+    }
+    exit(1);
+    return;
 }
 
-void request_load(void)
+static void request_requests_load(RequestContainer *rc,
+        struct json_object *requests)
 {
-    char *path = get_dat_path();
-    char *host, *scheme, *pth;
-    Request *req;
-    int port, count;
-    enum STATE {NONE, RC, REQ, QUERY, HEADER};
-    int state = RC;
-    char *headerstr;
-    method_t method;
-    RequestContainer *rc = NULL;
-    FILE *fp;
-    if ((fp = fopen(path, "r")) == NULL)
-        return perror(path);
-
-    while (!feof(fp)){
-        switch(state){
-            case RC:
-                scheme = fscanfstr(fp, "%s\n");
-                if (strlen(scheme) == 0){
-                    continue;
-                }
-                host = fscanfstr(fp, "%s\n");
-                fscanf(fp, "%d", &port);
-                rc = create_request_container(scheme, host, port);
-#ifdef DEBUG
-                printf("%s\n%s\n%d\n", scheme, host, port);
-#endif
-                free(scheme);
-                free(host);
-                count = count_n(fp);
-                if (count == 0)
-                    state = NONE;
-                else if (count == 2)
-                    state = REQ;
-                else if (count == 4)
-                    state = RC;
-                continue;
-            case REQ:
-                if (rc == NULL)
-                    continue;
-                pth = fscanfstr(fp, "%s\n");
-                fscanf(fp, "%d", &method);
-#ifdef DEBUG
-                printf("%s\n%d\n", pth, method);
-#endif
-                add_request(rc, pth, method);
-                count = count_n(fp);
-                if (count == 0){
-                    free(pth);
-                    state = NONE;
-                }else if (count == 4){
-                    state = RC;
-                    free(pth);
-                }else if (count == 2){
-                    free(pth);
-                    state = REQ;
-                }else if (count == 1)
-                    state = QUERY;
-                continue;
-
-            case QUERY:
-                if (rc == NULL)
-                    continue;
-                char *querystr;
-                querystr = fscanfstr(fp, "%s");
-#ifdef DEBUG
-                printf("%s\n", querystr);
-#endif
-                Table *query;
-                query = table_load(querystr);
-                req = find_request(rc, pth, method);
-                req->query = query;
-                count = count_n(fp);
-                free(querystr);
-                if (count == 1)
-                    state = HEADER;
-                else if(count == 3)
-                    state = REQ;
-                else if(count == 7)
-                    state = RC;
-                else
-                    state = NONE;
-                continue;
-
-            case HEADER:
-                headerstr = fscanfstr(fp, "%s");
-#ifdef DEBUG
-                printf("%s\n", headerstr);
-#endif
-                Table *header;
-                header = table_load(headerstr);
-                req = find_request(rc, pth, method);
-                req->header = header;
-                free(headerstr);
-                count = count_n(fp);
-                if (count == 6){
-                    state = RC;
-                } else if (count == 2){
-                    state = REQ;
-                }
-                else{
-                    state = NONE;
-                }
-                continue;
-            case NONE:
-                goto BRK_WHILE;
+    int i;
+    struct json_object *obj = NULL, *tmp=NULL;
+    for (i = 0; i < json_object_array_length(requests); i++){
+        char *path;
+        method_t method = GET;
+        obj = json_object_array_get_idx(requests, i);
+        if (!json_object_is_type(obj, json_type_object)){
+            perrormsg("Type Error", 1, "requests item must be an object value");
+            goto error;
         }
-BRK_WHILE:
-        break;
+
+        // path
+        if (json_object_object_get_ex(obj, "path", &tmp)){
+            if (json_object_is_type(tmp, json_type_string)){
+                path = dupstr(json_object_get_string(tmp));
+#ifdef DEBUG
+                printf("Path: %s\n", path);
+#endif
+            }else{
+                perrormsg("Type Error", 1, "path must be a string value");
+                goto error;
+            }
+        }else{
+            perrormsg("Data Error", 1, "request item must have a path item");
+            goto error;
+        }
+        json_object_put(tmp);
+
+        // method
+        if (json_object_object_get_ex(obj, "post", &tmp)){
+            if (json_object_is_type(tmp, json_type_boolean)){
+                if (json_object_get_boolean(tmp)){
+                    method = POST;
+                }
+            }else{
+                perrormsg("Type Error", 1, "post must be a boolean value");
+                goto error;
+            }
+        }
+        Request *req;
+        req = add_request(rc, path, method);
+        free(path);
+        if (req == NULL){
+            perrormsg("Error", 1, "add request error");
+            goto error;
+        }
+        json_object_put(tmp);
+        // params
+        if (json_object_object_get_ex(obj, "params", &tmp)){
+            if (json_object_is_type(tmp, json_type_object)){
+                json_object_object_foreach(tmp, key, val)
+                {
+                    if (json_object_is_type(val, json_type_string)){
+#ifdef DEBUG
+                        printf("Add Query: %s = %s\n", key, json_object_get_string(val));
+#endif
+                        add_query(req, key, json_object_get_string(val));
+                    }else{
+                        perrormsg("Type Error", 3, "params ", key, " value not a string");
+                    }
+                }
+            }else{
+                perrormsg("Type Error", 1, "params must be an object value");
+                goto error;
+            }
+        }
+
+        json_object_put(tmp);
+        // header
+        if (json_object_object_get_ex(obj, "headers", &tmp)){
+            if (json_object_is_type(tmp, json_type_object)){
+                json_object_object_foreach(tmp, key, val)
+                {
+                    if (json_object_is_type(val, json_type_string)){
+#ifdef DEBUG
+                        printf("Add header: %s = %s\n", key, json_object_get_string(val));
+#endif
+                        add_header(req, key, json_object_get_string(val));
+                    }else{
+                        perrormsg("Type Error", 3, "Header", key, " value not a string");
+                    }
+                }
+            }else{
+                perrormsg("Type Error", 1, "header must be an object value");
+                goto error;
+            }
+        }
     }
 
-    fclose(fp);
+error:
+    if (obj != NULL)
+        json_object_put(obj);
+    if (tmp != NULL)
+        json_object_put(tmp);
 }
 
-void request_dump(void)
+
+void request_dump(const char *path)
 {
-    char *path = get_dat_path();
+    if (path == NULL)
+        path = get_dat_path();
     char *lpath = get_lock_path(path);
+
     if (is_file_locked(path))
         return;
     FILE *fp;
     RequestContainer *rc;
+    Request *req;
+    struct json_object *root_object, *containers, *container, *requests;
+    struct json_object *request, *pobj, *hobj;
+    Table *table;
+
+    root_object = json_object_new_object();
+    containers = json_object_new_array();
+    json_object_object_add(root_object, "containers", containers);
+    json_object_get(containers);
+
+    for (rc = request_container; rc != NULL; rc = rc->next){
+        container = json_object_new_object();
+        json_object_array_add(containers, container);
+        json_object_get(container);
+
+        json_object_object_add(container, "scheme",
+                json_object_new_string(rc->scheme));
+        json_object_object_add(container, "host",
+                json_object_new_string(rc->host));
+        json_object_object_add(container, "verbose",
+                json_object_new_boolean(rc->verbose));
+        json_object_object_add(container, "port",
+                json_object_new_int(rc->port));
+
+        requests = json_object_new_array();
+        json_object_object_add(container, "requests", requests);
+        json_object_get(requests);
+
+        for (req = rc->requests; req != NULL; req = req->next){
+            request = json_object_new_object();
+            json_object_array_add(requests, request);
+            json_object_get(request);
+
+            json_object_object_add(request, "path",
+                    json_object_new_string(req->path));
+            json_object_object_add(request, "post",
+                    json_object_new_boolean(req->method == POST));
+
+            pobj = json_object_new_object();
+            json_object_object_add(request, "params", pobj);
+            json_object_get(pobj);
+
+            for (table = req->query; table != NULL; table = table->next){
+                json_object_object_add(pobj, table->key,
+                        json_object_new_string(table->val));
+            }
+            json_object_put(pobj);
+
+            hobj = json_object_new_object();
+            json_object_object_add(request, "header", hobj);
+            json_object_get(hobj);
+
+            for (table=req->header; table != NULL; table = table->next){
+                json_object_object_add(hobj, table->key,
+                        json_object_new_string(table->val));
+            }
+            json_object_put(hobj);
+            json_object_put(request);
+        }
+        json_object_put(requests);
+        json_object_put(container);
+    }
+    json_object_put(containers);
 
     fp = fopen(lpath, "w");
     if (fp == NULL){
-        perror(path);
+        perror(lpath);
         return;
     }
-
-    for (rc = request_container; rc != NULL; rc=rc->next){
-        fwrite(rc->scheme, strlen(rc->scheme), sizeof(char), fp);
-        fputc('\n', fp);
-        fwrite(rc->host, strlen(rc->host), sizeof(char), fp);
-        fputc('\n', fp);
-        fprintf(fp, "%d\n", rc->port);
-        fwrite("\n", 1, sizeof(char), fp);
-
-        Request *req;
-        for (req = rc->requests; req != NULL; req=req->next){
-            fwrite(req->path, strlen(req->path), sizeof(char), fp);
-            fputc('\n', fp);
-            fprintf(fp, "%d\n", req->method);
-            if(req->query){
-                char *query;
-                query = table_dump(req->query);
-                if (query != NULL){
-                    fwrite(query, strlen(query), sizeof(char), fp);
-                    free(query);
-                }
-            }else{
-                fputc('\0', fp);
-            }
-            fputc('\n', fp);
-            if (req->header){
-                char *header = table_dump(req->header);
-                if (header != NULL){
-                    fwrite(header, strlen(header), sizeof(char), fp);
-                    free(header);
-                }
-            }
-            fputc('\n', fp);
-            fputc('\n', fp);
-        }
-        fwrite("\n\n\n\n", 4, sizeof(char), fp);
-    }
+    fprint_pretty_json(fp, json_object_to_json_string(root_object), 0);
     fclose(fp);
     rename(lpath, path);
-    free(lpath);
-    unlock_file(path);
-
-    if (strcmp(path, DATA_FILE) != 0){
-        free(path);
-    }
+    json_object_put(root_object);
 }
 
 static char *get_request_url(const RequestContainer *rc, const Request *req)
@@ -878,7 +975,7 @@ static char *parse_request_query(const RequestContainer *rc, const Request *req)
                 if (ch == '}'){
                     buf[i] = '\0';
                     state = NONE;
-                    char *r = parse_query_value(rc, req, buf);
+                    char *r = parse_query_value(rc, req, stripspace(buf));
                     if (r == NULL){
                         free(ret);
                         free(rv);
@@ -1018,4 +1115,23 @@ request_run(RequestContainer *rc, Request *req)
         current_request = NULL;
     curl_easy_cleanup(curl);
     return obj;
+}
+
+void request_all_run(void)
+{
+    RequestContainer *rc;
+    Request *req;
+    for (rc = request_container; rc != NULL; rc = rc->next){
+        printf(">>>>>>>> Begain %s://%s:%d <<<<<<<<\n", rc->scheme,
+                rc->host, rc->port);
+        for (req = rc->requests; req != NULL; req=req->next){
+            printf("========== Request %s %s ==========\n",
+                    req->method == POST ? "POST" : "GET", req->path);
+            request_run(rc, req);
+            printf("========== End Request %s %s ==========\n",
+                    req->method == POST ? "POST" : "GET", req->path);
+        }
+        printf(">>>>>>>> End %s://%s:%d <<<<<<<<\n", rc->scheme,
+                rc->host, rc->port);
+    }
 }

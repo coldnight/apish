@@ -17,6 +17,22 @@ int file_exists(const char *path)
     }
 }
 
+char *get_dat_path(void)
+{
+    char *hp = getenv("HOME");
+    if (hp == NULL)
+        return DATA_FILE;
+    char *r = (char *) malloc(sizeof(char) * (strlen(hp) + strlen(DATA_FILE) + 2));
+    if (r == NULL){
+        perror("memory empty");
+        return DATA_FILE;
+    }
+    strcpy(r, hp);
+    strcat(r, "/");
+    strcat(r, DATA_FILE);
+    return r;
+}
+
 char *get_lock_path(const char *path)
 {
     char *tmp;
@@ -77,11 +93,11 @@ int unlock_file(const char *path)
     return False;
 }
 
-static void print_level_string(int level){
+static void print_level_string(FILE *stream, int level){
 
     int i;
     for (i=0; i < level; i++){
-        printf("%s", LEVEL_STR);
+        fprintf(stream, "%s", LEVEL_STR);
     }
 }
 
@@ -106,6 +122,9 @@ static void print_color_end(void)
 
 void fprint_pretty_json(FILE *stream, const char *json_str, int colored)
 {
+    if (global_colored != -1){
+        colored = global_colored;
+    }
     char *buf;
     if ((buf = (char *)malloc(sizeof(char) * (strlen(json_str) + 1))) == NULL){
         perror("Memory empty");
@@ -129,7 +148,7 @@ void fprint_pretty_json(FILE *stream, const char *json_str, int colored)
             fputc(ch, stream);
             fputc('\n', stream);
             wrapped = True;
-            print_level_string(level);
+            print_level_string(stream, level);
             if (ch == '{')
                 role = KEY;
             else{
@@ -144,7 +163,7 @@ void fprint_pretty_json(FILE *stream, const char *json_str, int colored)
             fputc('\n', stream);
             wrapped = True;
             level--;
-            print_level_string(level);
+            print_level_string(stream, level);
             fputc(ch, stream);
             wrap=True;
             if (ch == ']')
@@ -157,7 +176,7 @@ void fprint_pretty_json(FILE *stream, const char *json_str, int colored)
             fputc(ch, stream);
             fputc('\n', stream);
             wrapped = True;
-            print_level_string(level);
+            print_level_string(stream, level);
             if (wrap)
                 wrap = False;
             if (!in_list)
@@ -168,7 +187,7 @@ void fprint_pretty_json(FILE *stream, const char *json_str, int colored)
             if (single_q == NONE && double_q == NONE && ch == ':'){
                 role = VALUE;
             }
-            if (ch == '\'' && pch != '\\' && role == VALUE && colored){
+            if (ch == '\'' && pch != '\\' && role == VALUE){
                 single_q = single_q == SQ ? NONE : SQ;
                 if (single_q == SQ){
                     if (colored)
@@ -180,14 +199,16 @@ void fprint_pretty_json(FILE *stream, const char *json_str, int colored)
                         print_color_end();
                 }
             }
-            else if (ch == '"' && pch != '\\' && role == VALUE && colored){
+            else if (ch == '"' && pch != '\\' && role == VALUE){
                 double_q = double_q == SQ ? NONE : SQ;
                 if (double_q == SQ){
-                    print_color_start("green");
-                    putchar(ch);
+                    if (colored)
+                        print_color_start("green");
+                    fputc(ch, stream);
                 }else{
-                    putchar(ch);
-                    print_color_end();
+                    fputc(ch, stream);
+                    if (colored)
+                        print_color_end();
                 }
             }else{
                 if (role == KEY &&
@@ -195,7 +216,7 @@ void fprint_pretty_json(FILE *stream, const char *json_str, int colored)
                          (ch == '"' && pch != '\\')) && colored)
                     ;
                 else if (role == VALUE && ch != ' ' && ch != '\'' &&
-                        ch != '"' && ch != ':' && !color_started &&
+                        ch != '"' && ch != ':' &&
                         single_q == NONE && double_q == NONE && colored){
                     print_color_start("red");
                     color_started = True;

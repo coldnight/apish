@@ -1,0 +1,22 @@
+{
+    "containers":[
+        {
+            "scheme": "http",
+            "host": "localhost",
+            "port": 8080,
+            "requests":[
+                {
+                    "path": "/",
+                    "post": true,
+                    "params": {
+                        "uid": "uid",
+                        "pid": "pid"},
+
+                    "header":{
+                        "pp": "tt"
+                    }
+                }
+            ]
+        }
+    ]
+}

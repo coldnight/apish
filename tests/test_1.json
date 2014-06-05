@@ -1,0 +1,36 @@
+{
+    "containers":[
+        {
+            "scheme": "http",
+            "host": "localhost",
+            "port": 8080,
+            "requests":[
+                {
+                    "path": "/",
+                    "post": true,
+                    "params": {
+                        "uid": "uid",
+                        "pid": "pid"},
+
+                    "header":{
+                        "pp": "tt"
+                    }
+                },
+                {
+                    "path": "/login",
+                    "post": false,
+                    "header":{
+                        "Content-Type": "application/json",
+                    }
+                },
+                {
+                    "path": "/login",
+                    "post": true,
+                    "params": {
+                        "uid": '0',
+                    }
+                }
+            ]
+        }
+    ]
+}
