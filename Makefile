@@ -7,7 +7,7 @@ LDFLAGS += $(shell pkg-config --libs libcurl)
 LDFLAGS += -Iinclude
 all: apish
 apish: clean request.o command.o util.o
-	${CC} ${FLAGS} ${CFLAGS} ${LDFLAGS} command.o request.o util.o src/apish.c -o apish -lcurl
+	${CC} ${FLAGS} ${CFLAGS} ${LDFLAGS} command.o request.o util.o src/apish.c -o apish
 
 test: clean request.o command.o util.o
 	${CC} ${FLAGS} ${CFLAGS} ${LDFLAGS} command.o request.o util.o tests/test.c -o tests/test
