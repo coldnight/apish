@@ -3,11 +3,11 @@
  * You can edit your apish iniput file as this format
  */
 
-/* All the data are all in a object */
+/* All the data are all in an object */
 {
     /*
-     * And put the containers in 'containers' key
-     * 'containers' is an array, and the item in it is an object
+     * And put the containers in 'containers' item.
+     * The 'containers' item is an array, and the item in it is an object
      */
     'containers': [
         {
