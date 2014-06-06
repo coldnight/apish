@@ -1,0 +1,64 @@
+/*
+ * This file is an example for the  input file of apish.
+ * You can edit your apish iniput file as this format
+ */
+
+/* All the data are all in a object */
+{
+    /*
+     * And put the containers in 'containers' key
+     * 'containers' is an array, and the item in it is an object
+     */
+    'containers': [
+        {
+            /*
+             * Every container has 5 items: 
+             *      scheme      -- http or https
+             *      host        -- the request's host
+             *      port        -- the request's port, this value must be an integer
+             *      verbose     -- show the verbose of request, this value must be a boolean
+             *      requests    -- this item is an array, to put the requests of this container
+             */
+            "scheme": "http",
+            "host": "localhost",
+            "port": 8000,
+            "verbose": false,
+            "requests": [
+                /*
+                 * Every request has 4 items:
+                 *      path        --  the path of the request
+                 *      post        --  this value is a boolean, if the value is true, and apish will use POST method to request this request
+                 *      params      --  arguments of this request, this item is an object
+                 *      header      --  headers of this request, this item is an object
+                 */
+                {
+                    "path": "/login",
+                    "post": true,
+                    "params": {
+                        "username": "wwwww",
+                        "password": "333333"
+                    },
+                    "header": {
+                        "Accept-Encoding": "gzip, deflate"
+                    }
+                }
+
+                {
+                    "path": "/somewhere",
+                    "post": true,
+                    "params": {
+                        /*
+                         * In a request your can reference another request's back data in 'params' like below
+                         * {{ 0.uid }} to reference the 'uid' item of the  first request's back data,
+                         * and the first request must back a JSON format data
+                         */
+                        "uid": "{{ 0.uid }}",
+                    },
+                    "header":{
+                    }
+                }
+
+            ]
+        }
+    ]
+}
