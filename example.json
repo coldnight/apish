@@ -47,8 +47,8 @@
                     "post": true,
                     "params": {
                         /*
-                         * In a request your can reference another request's back data in 'params' like below
-                         * {{ 0.uid }} to reference the 'uid' item of the  first request's back data,
+                         * In a request your can reference another request's response data in 'params' like below
+                         * {{ 0.uid }} to reference the 'uid' item of the  first request's response data,
                          * and the first request must back a JSON format data
                          */
                         "uid": "{{ 0.uid }}",
