@@ -298,60 +298,60 @@ free_container()
 }
 
 
-static char *table_dump(Table *h)
-{
-    Table *tmp;
-    char *ret = NULL;
+/* static char *table_dump(Table *h) */
+/* { */
+/*     Table *tmp; */
+/*     char *ret = NULL; */
 
-#ifdef DEBUG
-    printf("start\n");
-#endif
-    for (tmp = h; tmp != NULL; tmp=tmp->next){
-        char *k, *v, *key, *val;
-        if ((key = dupstr(tmp->key)) == NULL){
-            break;
-        }
-        if ((val = dupstr(tmp->val)) == NULL){
-            break;
-        }
-    v = curl_easy_escape(easy_handler, val, 0);
-        k = curl_easy_escape(easy_handler, key, 0);
-        int size = strlen(k) + strlen(v) + 3;
-        if (ret == NULL){
-#ifdef DEBUG
-            printf("msize: %d\n", size);
-#endif
-            ret = (char *)malloc(sizeof(char) * size);
-            strcpy(ret, "");
-        }else{
-#ifdef DEBUG
-            printf("rsize: %ld\n", size + strlen(ret));
-#endif
-            ret = (char *) realloc(ret, sizeof(char) * (size + strlen(ret)));
+/* #ifdef DEBUG */
+/*     printf("start\n"); */
+/* #endif */
+/*     for (tmp = h; tmp != NULL; tmp=tmp->next){ */
+/*         char *k, *v, *key, *val; */
+/*         if ((key = dupstr(tmp->key)) == NULL){ */
+/*             break; */
+/*         } */
+/*         if ((val = dupstr(tmp->val)) == NULL){ */
+/*             break; */
+/*         } */
+/*         v = curl_easy_escape(easy_handler, val, 0); */
+/*         k = curl_easy_escape(easy_handler, key, 0); */
+/*         int size = strlen(k) + strlen(v) + 3; */
+/*         if (ret == NULL){ */
+/* #ifdef DEBUG */
+/*             printf("msize: %d\n", size); */
+/* #endif */
+/*             ret = (char *)malloc(sizeof(char) * size); */
+/*             strcpy(ret, ""); */
+/*         }else{ */
+/* #ifdef DEBUG */
+/*             printf("rsize: %ld\n", size + strlen(ret)); */
+/* #endif */
+/*             ret = (char *) realloc(ret, sizeof(char) * (size + strlen(ret))); */
 
-        }
-        if (ret == NULL){
-            perror("memoty empty");
-            curl_free(k);
-            curl_free(v);
-            free(key);
-            free(val);
-            break;
-        }
-        strcat(ret, k);
-        strcat(ret, "=");
-        strcat(ret, v);
-        strcat(ret, "&");
-        curl_free(k);
-        curl_free(v);
-        free(key);
-        free(val);
-    }
-#ifdef DEBUG
-    printf("table dump: %s\n", ret);
-#endif
-    return ret;
-}
+/*         } */
+/*         if (ret == NULL){ */
+/*             perror("memoty empty"); */
+/*             curl_free(k); */
+/*             curl_free(v); */
+/*             free(key); */
+/*             free(val); */
+/*             break; */
+/*         } */
+/*         strcat(ret, k); */
+/*         strcat(ret, "="); */
+/*         strcat(ret, v); */
+/*         strcat(ret, "&"); */
+/*         curl_free(k); */
+/*         curl_free(v); */
+/*         free(key); */
+/*         free(val); */
+/*     } */
+/* #ifdef DEBUG */
+/*     printf("table dump: %s\n", ret); */
+/* #endif */
+/*     return ret; */
+/* } */
 
 /*
  * 删除table节点
@@ -376,54 +376,54 @@ int delete_table(Table **root, const char *key)
     return 0;
 }
 
-static Table *table_load(const char *str)
-{
-    Table *table = NULL;
-    char buf[BUFSIZ], *key=NULL, *val=NULL;
-    enum STATE {NONE, KEY, VALUE, DONE};
-    enum STATE state = KEY;
-    int i = 0, t, n = 0;
-    for (t = str[n]; t != '\0'; t = str[++n]){
-        if (state == KEY){
-            if (t != '='){
-                buf[i++] = t;
-            }else{
-                buf[i] = '\0';
-                state = VALUE;
-                char *ek = curl_easy_unescape(easy_handler, buf, 0, 0);
-                if ((key = dupstr(ek)) == NULL){
-                    return NULL;
-                }
-                curl_free(ek);
-                i = 0;
-            }
-        }else if (state == VALUE){
-            if (t != '&'){
-                buf[i++] = t;
-            }else{
-                buf[i] = '\0';
-                state = DONE;
-                char *ev = curl_easy_unescape(easy_handler, buf, 0, 0);
-                if ((val = dupstr(ev)) == NULL){
-                    return NULL;
-                }
-                curl_free(ev);
-                i = 0;
+/* static Table *table_load(const char *str) */
+/* { */
+/*     Table *table = NULL; */
+/*     char buf[BUFSIZ], *key=NULL, *val=NULL; */
+/*     enum STATE {NONE, KEY, VALUE, DONE}; */
+/*     enum STATE state = KEY; */
+/*     int i = 0, t, n = 0; */
+/*     for (t = str[n]; t != '\0'; t = str[++n]){ */
+/*         if (state == KEY){ */
+/*             if (t != '='){ */
+/*                 buf[i++] = t; */
+/*             }else{ */
+/*                 buf[i] = '\0'; */
+/*                 state = VALUE; */
+/*                 char *ek = curl_easy_unescape(easy_handler, buf, 0, 0); */
+/*                 if ((key = dupstr(ek)) == NULL){ */
+/*                     return NULL; */
+/*                 } */
+/*                 curl_free(ek); */
+/*                 i = 0; */
+/*             } */
+/*         }else if (state == VALUE){ */
+/*             if (t != '&'){ */
+/*                 buf[i++] = t; */
+/*             }else{ */
+/*                 buf[i] = '\0'; */
+/*                 state = DONE; */
+/*                 char *ev = curl_easy_unescape(easy_handler, buf, 0, 0); */
+/*                 if ((val = dupstr(ev)) == NULL){ */
+/*                     return NULL; */
+/*                 } */
+/*                 curl_free(ev); */
+/*                 i = 0; */
 
-                append_table(&table, key, val);
-                free(key);
-                free(val);
-                key = NULL;
-                val = NULL;
-                state = KEY;
-            }
-        }
-    }
-    if (key != NULL && val != NULL){
-        append_table(&table, key, val);
-    }
-    return table;
-}
+/*                 append_table(&table, key, val); */
+/*                 free(key); */
+/*                 free(val); */
+/*                 key = NULL; */
+/*                 val = NULL; */
+/*                 state = KEY; */
+/*             } */
+/*         } */
+/*     } */
+/*     if (key != NULL && val != NULL){ */
+/*         append_table(&table, key, val); */
+/*     } */
+/*     return table; */
+/* } */
 
 void request_load(const char *path)
 {
@@ -638,19 +638,16 @@ error:
         json_object_put(tmp);
 }
 
-static char *get_date(void)
+static int get_date(char *ret, int max, const char *format)
 {
     time_t now;
     int n;
     struct tm *tm_now;
-    char ret[BUFSIZ];
 
     now = time(NULL);
     tm_now = localtime(&now);
-    n = strftime(ret, BUFSIZ, "%Y-%m-%d %H:%M:%S", tm_now);
-    if (n > 0)
-        return ret;
-    return NULL;
+    n = strftime(ret, max, format, tm_now);
+    return n;
 }
 
 
@@ -735,9 +732,12 @@ void request_dump(const char *path)
         perror(lpath);
         return;
     }
+
+    char date[20]="unknow";
+    get_date(date, 20, "%Y-%m-%d %H:%M:%S");
     fprintf(fp, "/*\n");
     fprintf(fp, " * This file generated by apish(https://github.com/coldnight/apish)");
-    fprintf(fp, " at %s.\n", get_date());
+    fprintf(fp, " at %s.\n", date);
     fprintf(fp, " * You can edit it by the below format:\n");
     fprintf(fp, " *     https://github.com/coldnight/apish/blob/master/example.json\n");
     fprintf(fp, " */\n");
