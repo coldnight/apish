@@ -41,8 +41,7 @@
                     "header": {
                         "Accept-Encoding": "gzip, deflate"
                     }
-                }
-
+                },
                 {
                     "path": "/somewhere",
                     "post": true,
