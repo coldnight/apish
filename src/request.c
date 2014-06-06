@@ -741,7 +741,7 @@ void request_dump(const char *path)
     fprintf(fp, " * You can edit it by the below format:\n");
     fprintf(fp, " *     https://github.com/coldnight/apish/blob/master/example.json\n");
     fprintf(fp, " */\n");
-    fprint_pretty_json(fp, json_object_to_json_string(root_object), 0);
+    fprint_pretty_json(fp, root_object, 0);
     fclose(fp);
     rename(lpath, path);
     json_object_put(root_object);
@@ -1126,7 +1126,7 @@ request_run(RequestContainer *rc, Request *req)
 
             req->write_data = obj;
             printf("\nJSON Response >>> \n");
-            print_pretty_json(json_object_to_json_string(obj));
+            print_pretty_json(obj);
         }
     }
     free(str);

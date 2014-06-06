@@ -7,6 +7,19 @@
 #include <sys/stat.h>
 #include <stdarg.h>
 
+static void print_color_start(const char *color);
+static void print_color_end(void);
+static void fprint_level_string(FILE *stream);
+static void fprint_json_object_key(FILE *, const char *, int, int);
+static void fprint_json_object_item(FILE *, struct json_object *, int);
+static void fprint_json_object_object(FILE *, struct json_object *, int);
+static void fprint_json_object_array(FILE *, struct json_object *, int);
+
+enum pjson_state_t {NONE, KEY, VALUE, ARRAY, OBJECT};
+static int pjson_level = 0;
+static enum pjson_state_t prev_type = NONE;
+static enum pjson_state_t current_type = NONE;
+
 int file_exists(const char *path)
 {
     struct stat buf;
@@ -93,16 +106,18 @@ int unlock_file(const char *path)
     return False;
 }
 
-static void print_level_string(FILE *stream, int level){
+static void fprint_level_string(FILE *stream){
 
     int i;
-    for (i=0; i < level; i++){
+    for (i=0; i < pjson_level; i++){
         fprintf(stream, "%s", LEVEL_STR);
     }
 }
 
 static void print_color_start(const char *color)
 {
+    if (!global_colored)
+        return;
     const char *out;
     if (strcmp(color, "red") == 0)
         out = "\033[0;31;5m";
@@ -117,126 +132,108 @@ static void print_color_start(const char *color)
 
 static void print_color_end(void)
 {
+    if (!global_colored)
+        return;
     printf("\033[0m");
 }
 
-void fprint_pretty_json(FILE *stream, const char *json_str, int colored)
+static void fprint_json_object_key(FILE *stream, const char *key, int colored, int first)
 {
-    if (global_colored != -1 && colored){
-        colored = global_colored;
-    }
-    char *buf;
-    if ((buf = (char *)malloc(sizeof(char) * (strlen(json_str) + 1))) == NULL){
-        perror("Memory empty");
-        return;
-    }
-    strcpy(buf, json_str);
-    char *o = buf;
-    int level = 0, ch, wrap=False, wrapped = False, pch;
-    enum QUOTE {NONE, SQ};
-    enum QUOTE single_q = NONE;
-    enum QUOTE double_q = NONE;
-    enum ROLE {KEY, VALUE};
-    enum ROLE role = KEY;
-    int color_started = False;
-    int n = 0, in_list=False;
+    if (prev_type != NONE && current_type != ARRAY && !first)
+        fprintf(stream, ",\n");
+    fprint_level_string(stream);
+    prev_type = KEY;
+    if (colored)
+        fprintf(stream, "%s: ", key);
+    else
+        fprintf(stream, "\"%s\": ", key);
 
-    for (ch = *buf; ch != '\0'; pch = ch, ch = *(++buf), n++){
+}
 
-        if ((ch == '{' || ch == '[') && single_q == NONE && double_q == NONE){
-            level++;
-            fputc(ch, stream);
-            fputc('\n', stream);
-            wrapped = True;
-            print_level_string(stream, level);
-            if (ch == '{')
-                role = KEY;
-            else{
-                role = VALUE;
-                in_list = True;
+static void fprint_json_object_item(FILE *stream, struct json_object *object, int colored)
+{
+    json_type type;
+    type = json_object_get_type(object);
+    switch (type){
+        case json_type_object:
+            fprint_json_object_object(stream, object, colored);
+            break;
+        case json_type_array:
+            fprint_json_object_array(stream, object, colored);
+            break;
+
+        default:
+            if (colored){
+                print_color_start(type == json_type_string ? "green" : "red");
             }
-        }else if ((ch == '}' || ch == ']') && single_q == NONE && double_q == NONE ){
-            if (color_started){
+            prev_type = VALUE;
+            if (current_type == ARRAY)
+                fprint_level_string(stream);
+            fprintf(stream, "%s", json_object_to_json_string(object));
+            if (colored){
                 print_color_end();
-                color_started = False;
             }
-            fputc('\n', stream);
-            wrapped = True;
-            level--;
-            print_level_string(stream, level);
-            fputc(ch, stream);
-            wrap=True;
-            if (ch == ']')
-                in_list = False;
-        }else if (ch == ',' && single_q == NONE && double_q == NONE){
-            if (color_started){
-                print_color_end();
-                color_started = False;
-            }
-            fputc(ch, stream);
-            fputc('\n', stream);
-            wrapped = True;
-            print_level_string(stream, level);
-            if (wrap)
-                wrap = False;
-            if (!in_list)
-                role = KEY;
-        }else if ( wrapped && ch == ' ')
-            continue;
-        else{
-            if (single_q == NONE && double_q == NONE && ch == ':'){
-                role = VALUE;
-            }
-            if (ch == '\'' && pch != '\\' && role == VALUE){
-                single_q = single_q == SQ ? NONE : SQ;
-                if (single_q == SQ){
-                    if (colored)
-                        print_color_start("green");
-                    fputc(ch, stream);
-                }else{
-                    fputc(ch, stream);
-                    if (colored)
-                        print_color_end();
-                }
-            }
-            else if (ch == '"' && pch != '\\' && role == VALUE){
-                double_q = double_q == SQ ? NONE : SQ;
-                if (double_q == SQ){
-                    if (colored)
-                        print_color_start("green");
-                    fputc(ch, stream);
-                }else{
-                    fputc(ch, stream);
-                    if (colored)
-                        print_color_end();
-                }
-            }else{
-                if (role == KEY &&
-                        ((ch == '\'' && pch != '\\') ||
-                         (ch == '"' && pch != '\\')) && colored)
-                    ;
-                else if (role == VALUE && ch != ' ' && ch != '\'' &&
-                        ch != '"' && ch != ':' &&
-                        single_q == NONE && double_q == NONE && colored){
-                    print_color_start("red");
-                    color_started = True;
-                    fputc(ch, stream);
-                }else{
-                    fputc(ch, stream);
-                }
-            }
-            wrap = False;
-            wrapped = False;
-        }
+            break;
     }
-    fputc('\n', stream);
-    free(o);
+}
+static void fprint_json_object_object(FILE *stream, struct json_object *object, int colored)
+{
+    enum pjson_state_t old = current_type;
+    int i = 0;
+    current_type = OBJECT;
+    if (old == ARRAY || prev_type != KEY)
+        fprint_level_string(stream);
+    fprintf(stream, "{\n");
+    pjson_level++;
+    json_object_object_foreach(object, key, val)
+    {
+        fprint_json_object_key(stream, key, colored, i++ == 0);
+        fprint_json_object_item(stream, val, colored);
+    }
+    fprintf(stream, "\n");
+    pjson_level--;
+    fprint_level_string(stream);
+    fprintf(stream, "}");
+    prev_type = OBJECT;
+    current_type = old;
 }
 
 
-void print_pretty_json(const char *json_str)
+static void fprint_json_object_array(FILE *stream, struct json_object *object, int colored)
 {
-    fprint_pretty_json(stdout, json_str, 1);
+    int i;
+    enum pjson_state_t old = current_type;
+    current_type = ARRAY;
+    if (old == ARRAY || prev_type != KEY)
+        fprint_level_string(stream);
+    fprintf(stream, "[\n");
+    pjson_level++;
+    for (i = 0; i < json_object_array_length(object); i++){
+        if (i > 0)
+            fprintf(stream, ",\n");
+        fprint_json_object_item(stream, json_object_array_get_idx(object, i), colored);
+    }
+    fprintf(stream, "\n");
+    pjson_level--;
+    fprint_level_string(stream);
+    fprintf(stream, "]");
+    prev_type = ARRAY;
+    current_type = old;
+}
+
+
+void fprint_pretty_json(FILE *stream, struct json_object *object, int colored)
+{
+    if (!global_colored)
+        colored = 0;
+    fprint_json_object_item(stream, object, colored);
+    fputc('\n', stream);
+}
+
+
+void print_pretty_json(struct json_object *object)
+{
+    fprint_pretty_json(stdout, object, 1);
 }
 
 char *dupstr(const char *s)
