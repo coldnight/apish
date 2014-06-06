@@ -611,7 +611,7 @@ static void request_requests_load(RequestContainer *rc,
 
         json_object_put(tmp);
         // header
-        if (json_object_object_get_ex(obj, "headers", &tmp)){
+        if (json_object_object_get_ex(obj, "header", &tmp)){
             if (json_object_is_type(tmp, json_type_object)){
                 json_object_object_foreach(tmp, key, val)
                 {
