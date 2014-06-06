@@ -140,10 +140,6 @@ add_request(RequestContainer *reqcont, const char *path, method_t method)
     Request *tmp;
     char *p;
 
-    tmp = find_request(reqcont, path, method);
-    if (tmp != NULL)
-        return NULL;
-
     if ((p = dupstr(path)) == NULL){
         return NULL;
     }
@@ -881,7 +877,8 @@ parse_query_value(const RequestContainer *rc, const Request *req, const char *bu
                 t[ti] = '\0';
                 ti = 0;
                 if (!json_object_object_get_ex(obj, t, &obj)){
-                    perrormsg("Key Eerror", 3,  t, " in ", buf);
+                    perrormsg("Key Error", 5,  t, " in ", buf, ":",
+                            json_object_to_json_string(obj));
                     goto error;
                 }
                 if (ch == '.'){
@@ -931,7 +928,8 @@ parse_query_value(const RequestContainer *rc, const Request *req, const char *bu
     if (state == DOTKEY){
         t[ti] = '\0';
         if (!json_object_object_get_ex(obj, t, &obj)){
-            perrormsg("Key Error", 3, t, " in ", buf);
+            perrormsg("Key Error", 5, t, " in ", buf, ":" ,
+                    json_object_to_json_string(obj));
             goto error;
         }
     }
