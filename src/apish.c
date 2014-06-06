@@ -13,7 +13,7 @@ main(int argc, char **argv)
 {
     int ch, run=False, dump = True, list=False, index=-1;
     char *path = NULL;
-    while ((ch = getopt(argc, argv, "r::lhnc")) != -1){
+    while ((ch = getopt(argc, argv, "r::lhncv")) != -1){
         switch(ch){
             case 'r':
                 run = True;
@@ -31,6 +31,9 @@ main(int argc, char **argv)
                 break;
             case 'h':
                 help_info(*argv);
+                return 0;
+            case 'v':
+                printf("apish %s\n", APISH_VERSION);
                 return 0;
             default:
                 fprintf(stderr, "%s: invalid option '%s'\n", *argv, argv[optind-1]);
@@ -89,5 +92,6 @@ static void help_info(const char *exe_name)
     printf("\t-r[INDEX]\tjust run the requests and exit, \n");
     printf("\t\t\t  INDEX is the index of containers, default is run all containers.\n");
     printf("\t-h\t\tshow this information\n");
+    printf("\t-v\t\tshow the apish version number and exit\n");
 }
 
